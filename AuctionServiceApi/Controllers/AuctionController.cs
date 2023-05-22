@@ -20,6 +20,8 @@ public class AuctionController : ControllerBase
     private readonly IConfiguration _config;
     private AuctionRepository _auctionRepository;
 
+    //docker test
+
     public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository)
     {
         _config = config;
