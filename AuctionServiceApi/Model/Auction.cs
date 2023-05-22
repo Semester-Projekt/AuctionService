@@ -18,7 +18,7 @@ namespace Model
 
 		[BsonElement("AuctionId")]
 		public int AuctionId { get; set; }
-
+		
 		[BsonElement("AuctionEndDate")]
 		public DateTime AuctionEndDate { get; set; } = DateTime.Now.AddDays(7);
 
