@@ -92,8 +92,7 @@ public class AuctionController : ControllerBase
 
         return Ok(result);
     }
-
-    /*
+    
     [HttpGet("getartifactid/{id}")]
     public async Task<IActionResult> GetArtifactIdFromArtifactService(int id)
     {
@@ -128,18 +127,6 @@ public class AuctionController : ControllerBase
 
             return Ok(filteredArtifact);
         }
-    }
-    */
-
-    [HttpGet("getAuctionsByCategoryCode/{categoryCode}"), DisableRequestSizeLimit]
-    public async Task<IActionResult> GetAuctionsByCategoryCode(string categoryCode)
-    {
-        _logger.LogInformation("getAuctionsByCategoryCode function hit");
-
-
-
-
-        return Ok();
     }
 
 
