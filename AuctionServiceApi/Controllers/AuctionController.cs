@@ -166,10 +166,12 @@ public class AuctionController : ControllerBase
 
 
             // Deserialize the JSON response into an Artifact object
-            ArtifactDTO artifact = await response.Content.ReadFromJsonAsync<ArtifactDTO>();
+            ArtifactDTO artifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
             
             // Extract the ArtifactID from the deserialized Artifact object
-            int artifactId = artifact.ArtifactID;
+            int artifactId = artifact!.ArtifactID;
+
+            _logger.LogInformation("ArtifactName: " + artifact.ArtifactName);
 
             _logger.LogInformation("ArtifactID: " + artifact.ArtifactID);
 
