@@ -16,7 +16,7 @@ namespace Model
 
         [BsonElement("ArtifactID")]
         public int ArtifactID { get; set; } //skal måske være en 'int'?
-
+        
         [BsonElement("ArtifactName")]
         public string? ArtifactName { get; set; }
 

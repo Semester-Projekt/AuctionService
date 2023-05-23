@@ -148,15 +148,15 @@ public class AuctionController : ControllerBase
 
 
     //POST
-    [HttpPost("addauction/{id}")]
-    public async Task<IActionResult> AddAuctionFromArtifactId(int id)
+    [HttpPost("addauction/{artifactID}")]
+    public async Task<IActionResult> AddAuctionFromArtifactId(int artifactID)
     {
         _logger.LogInformation("AddAuctionFromArtifactId function hit");
 
         using (HttpClient client = new HttpClient())
         {
             string artifactServiceUrl = "http://catalogue:80";
-            string getArtifactEndpoint = "/catalogue/getArtifactById/" + id;
+            string getArtifactEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
             HttpResponseMessage response = await client.GetAsync(artifactServiceUrl + getArtifactEndpoint);
             if (!response.IsSuccessStatusCode)
@@ -167,13 +167,8 @@ public class AuctionController : ControllerBase
 
             // Deserialize the JSON response into an Artifact object
             ArtifactDTO artifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
-            
-            // Extract the ArtifactID from the deserialized Artifact object
-            int artifactId = artifact!.ArtifactID;
 
             _logger.LogInformation("ArtifactName: " + artifact.ArtifactName);
-
-            _logger.LogInformation("ArtifactID: " + artifact.ArtifactID);
 
             int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _artifacts + 1
 
@@ -184,7 +179,7 @@ public class AuctionController : ControllerBase
             var newAuction = new Auction
             {
                 AuctionId = latestID,
-                ArtifactID = artifact.ArtifactID
+                ArtifactID = artifactID
             };
 
             // Add the new auction to the repository or perform necessary operations
