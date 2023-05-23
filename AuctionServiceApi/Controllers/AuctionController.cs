@@ -195,6 +195,8 @@ public class AuctionController : ControllerBase
                 ArtifactID = newAuction.ArtifactID
             };
 
+            _logger.LogInformation($"result: {result.ArtifactID} + {result.AuctionEndDate}");
+
             return Ok(result);
         }
     }
