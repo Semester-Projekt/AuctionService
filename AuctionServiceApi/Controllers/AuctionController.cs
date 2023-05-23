@@ -171,7 +171,7 @@ public class AuctionController : ControllerBase
             // Extract the ArtifactID from the deserialized Artifact object
             int artifactId = artifact.ArtifactID;
 
-            _logger.LogInformation("ArtifactID: " + artifactId);
+            _logger.LogInformation("ArtifactID: " + artifact.ArtifactID);
 
             int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _artifacts + 1
 
@@ -182,7 +182,7 @@ public class AuctionController : ControllerBase
             var newAuction = new Auction
             {
                 AuctionId = latestID,
-                ArtifactID = id
+                ArtifactID = artifact.ArtifactID
             };
 
             // Add the new auction to the repository or perform necessary operations
