@@ -254,7 +254,7 @@ public class AuctionController : ControllerBase
 
         if (userResponse.Result is ObjectResult objectResult && objectResult.Value is UserDTO user)
         {
-            var latestId = _auctionRepository.GetNextBidId();
+            var latestId = await _auctionRepository.GetNextBidId();
 
             _logger.LogInformation("BidId: " + latestId);
 

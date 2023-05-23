@@ -56,7 +56,7 @@ namespace Model
             return (lastAuction != null) ? lastAuction.AuctionId + 1 : 1;
         }
 
-        public int GetNextBidId()
+        public async Task<int> GetNextBidId()
         {
             var lastBid = _bids.AsQueryable().OrderByDescending(a => a.BidId).FirstOrDefault();
             return (lastBid != null) ? lastBid.BidId + 1 : 1;
