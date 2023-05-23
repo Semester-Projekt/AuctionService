@@ -12,7 +12,7 @@ namespace Model
 	public class AuctionRepository
 	{
         private readonly IMongoCollection<Auction> _auctions;
-        private readonly IMongoCollection<Bid> _bids;
+        private readonly IMongoCollection<BidDTO> _bids;
 
 
         public AuctionRepository()
@@ -21,7 +21,7 @@ namespace Model
             var client = new MongoClient(connectionString);
             var database = client.GetDatabase("Auction");
             _auctions = database.GetCollection<Auction>("Auctions");
-            _bids = database.GetCollection<Bid>("Bids");
+            _bids = database.GetCollection<BidDTO>("Bids");
         }
 
 
