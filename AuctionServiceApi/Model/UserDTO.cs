@@ -16,16 +16,14 @@ namespace Model
         public string? MongoId { get; set; }
 
         [BsonElement("UserName")]
-        public string UserName { get; set; }
+        public string? UserName { get; set; }
 
         [BsonElement("UserEmail")]
-        public string UserEmail { get; set; }
+        public string? UserEmail { get; set; }
 
         [BsonElement("UserPhone")]
-        public int UserPhone { get; set; }
+        public int? UserPhone { get; set; }
 
-
-        public List<ArtifactDTO> UsersArtifacts { get; set; }
 
         public UserDTO(string userName, string userEmail, int userPhone)
         {
