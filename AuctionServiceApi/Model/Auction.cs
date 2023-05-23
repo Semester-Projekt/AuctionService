@@ -18,7 +18,7 @@ namespace Model
 
 		[BsonElement("AuctionId")]
 		public int AuctionId { get; set; }
-
+		
 		[BsonElement("AuctionEndDate")]
 		public DateTime AuctionEndDate { get; set; } = DateTime.Now.AddDays(7);
 
@@ -26,13 +26,13 @@ namespace Model
 		public int ArtifactID { get; set; }
 
 		[BsonElement("CurrentBid")]
-		public Bid? CurrentBid { get; set; } = null;
+		public int? CurrentBid { get; set; } = 0;
 
         [BsonElement("FinalBid")]
         public Bid? FinalBid { get; set; } = null;
 
         [BsonElement("BidHistory")]
-        public List<Bid>? BidHistory { get; set; } = null;
+        public List<Bid>? BidHistory { get; set; } = new List<Bid>();
 
 
         public Auction(int auctionId, int artifactID)

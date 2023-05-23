@@ -20,6 +20,8 @@ public class AuctionController : ControllerBase
     private readonly IConfiguration _config;
     private AuctionRepository _auctionRepository;
 
+    //docker test
+
     public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository)
     {
         _config = config;
@@ -41,7 +43,6 @@ public class AuctionController : ControllerBase
 
 
     //GET
-    [Authorize]
     [HttpGet("getallauctions")]
     public async Task<IActionResult> GetAllAuctions()
     {
@@ -56,44 +57,68 @@ public class AuctionController : ControllerBase
             return BadRequest("Auction list is empty");
         }
 
+        
+
         var filteredAuctions = auctions.Select(c => new
         {
             c.ArtifactID,
             c.AuctionEndDate,
             c.CurrentBid,
-            c.FinalBid
+            c.FinalBid,
+            c.BidHistory
         });
 
         return Ok(filteredAuctions);
     }
 
-    [Authorize]
     [HttpGet("getAuctionById/{auctionId}")]
-    public async Task<IActionResult> GetAuctionById(int auctionId)
+    public async Task<Auction> GetAuctionById(int auctionId)
     {
         _logger.LogInformation("GetAuctionById function hit");
 
         var auction = _auctionRepository.GetAuctionById(auctionId).Result;
 
-        if (auction == null)
+        
+
+        var bidHistory = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID);
+        auction.BidHistory = (List<Bid>?)bidHistory.OrderByDescending(b => b.BidDate).ToList();
+
+        var currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
+        auction.CurrentBid = currentBid;
+
+        int? finalBid;
+        if (auction.AuctionEndDate < DateTime.Now)
         {
-            return BadRequest("No auction found");
+            finalBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
+        }
+        else
+        {
+            finalBid = null;
         }
 
         var result = new
         {
             ArtifactID = auction.ArtifactID,
             AuctionEndDate = auction.AuctionEndDate,
-            CurrentBid = auction.CurrentBid,
-            FinalBid = auction.FinalBid,
-            BidHistory = auction.BidHistory
+            CurrentBid = currentBid,
+            FinalBid = finalBid,
+            BidHistory = auction.BidHistory!.Select(b => new
+            {
+                BidOwner = new
+                {
+                    UserName = b.BidOwner!.UserName,
+                    UserEmail = b.BidOwner!.UserEmail,
+                    UserPhone = b.BidOwner!.UserPhone,
+                },
+                BidAmount = b.BidAmount,
+                BidDate = b.BidDate
+            })
         };
 
-
-        return Ok(result);
+        return auction;
+        //return Ok(result);
     }
-
-    [Authorize]
+    
     [HttpGet("getartifactid/{id}")]
     public async Task<IActionResult> GetArtifactIdFromArtifactService(int id)
     {
@@ -101,7 +126,7 @@ public class AuctionController : ControllerBase
 
         using (HttpClient client = new HttpClient())
         {
-            string artifactServiceUrl = "http://localhost:5235";
+            string artifactServiceUrl = "http://catalogue:80";
             string getArtifactEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(artifactServiceUrl + getArtifactEndpoint);
@@ -130,34 +155,56 @@ public class AuctionController : ControllerBase
         }
     }
 
-    [Authorize]
-    [HttpGet("getAuctionsByCategoryCode/{categoryCode}"), DisableRequestSizeLimit]
-    public async Task<IActionResult> GetAuctionsByCategoryCode(string categoryCode)
+    [HttpGet("getUserFromUserService/{id}"), DisableRequestSizeLimit]
+    public async Task<ActionResult<UserDTO>> GetUserFromUserService(int id)
     {
-        _logger.LogInformation("getAuctionsByCategoryCode function hit");
+        _logger.LogInformation("AuctionService - GetUser function hit");
 
+        using (HttpClient client = new HttpClient())
+        {
+            string userServiceUrl = "http://user:80";
+            string getUserEndpoint = "/user/getUser/" + id;
 
+            _logger.LogInformation(userServiceUrl + getUserEndpoint);
 
+            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint);
+            if (!response.IsSuccessStatusCode)
+            {
+                return StatusCode((int)response.StatusCode, "Failed to retrieve UserId from UserService");
+            }
 
-        return Ok();
+            var userResponse = await response.Content.ReadFromJsonAsync<UserDTO>();
+
+            if (userResponse != null)
+            {
+                _logger.LogInformation($"MongId: {userResponse.MongoId}");
+                _logger.LogInformation($"UserName: {userResponse.UserName}");
+
+                
+                return Ok(userResponse);
+            }
+            else
+            {
+                return BadRequest("Failed to retrieve User object");
+            }
+        }
     }
-
+    
 
 
 
 
 
     //POST
-    [Authorize]
-    [HttpPost("addauction/{id}")]
-    public async Task<IActionResult> AddAuctionFromArtifactId(int id)
+    [HttpPost("addauction/{artifactID}")]
+    public async Task<IActionResult> AddAuctionFromArtifactId(int artifactID)
     {
         _logger.LogInformation("AddAuctionFromArtifactId function hit");
 
         using (HttpClient client = new HttpClient())
         {
-            string artifactServiceUrl = "http://localhost:5235";
-            string getArtifactEndpoint = "/catalogue/getArtifactById/" + id;
+            string artifactServiceUrl = "http://catalogue:80";
+            string getArtifactEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
             HttpResponseMessage response = await client.GetAsync(artifactServiceUrl + getArtifactEndpoint);
             if (!response.IsSuccessStatusCode)
@@ -167,15 +214,10 @@ public class AuctionController : ControllerBase
 
 
             // Deserialize the JSON response into an Artifact object
-            ArtifactDTO artifact = await response.Content.ReadFromJsonAsync<ArtifactDTO>();
-            
-            // Extract the ArtifactID from the deserialized Artifact object
-            int artifactId = artifact.ArtifactID;
-
-            _logger.LogInformation("ArtifactID: " + artifactId);
+            ArtifactDTO artifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
 
             int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _artifacts + 1
-
+            
             // GetArtifactById til at hente det ArtifactID man vil sende til newAuction
 
 
@@ -183,7 +225,7 @@ public class AuctionController : ControllerBase
             var newAuction = new Auction
             {
                 AuctionId = latestID,
-                ArtifactID = id
+                ArtifactID = artifactID
             };
 
             // Add the new auction to the repository or perform necessary operations
@@ -196,7 +238,73 @@ public class AuctionController : ControllerBase
                 ArtifactID = newAuction.ArtifactID
             };
 
+            _logger.LogInformation($"result: {result.ArtifactID} + {result.AuctionEndDate}");
+
             return Ok(result);
+        }
+    }
+
+    [HttpPost("addBid/{userId}/{auctionid}")] // DENNE METODE SKAL KØRE IGENNEM RABBIT, HOW???
+    public async Task<IActionResult> AddNewBid([FromBody] Bid? bid, int userId, int auctionId)
+    {
+        _logger.LogInformation("AddNewBid function hit");
+
+        var userResponse = await GetUserFromUserService(userId);
+        _logger.LogInformation("userresponse result: " + userResponse.Result);
+
+        if (userResponse.Result is ObjectResult objectResult && objectResult.Value is UserDTO user)
+        {
+            var latestId = await _auctionRepository.GetNextBidId();
+
+            _logger.LogInformation("BidId: " + latestId);
+
+            if (user != null)
+            {
+
+                var newBid = new Bid
+                {
+                    BidId = latestId,
+                    ArtifactId = bid!.ArtifactId,
+                    BidOwner = user,
+                    BidAmount = bid.BidAmount
+                };
+                _logger.LogInformation("new Bid object made. BidId: " + newBid.BidId);
+
+                _auctionRepository.AddNewBid(newBid);
+
+
+                var result = new
+                {
+                    ArtifactId = newBid.ArtifactId,
+                    BidOwner = new
+                    {
+                        user.UserName,
+                        user.UserEmail,
+                        user.UserPhone
+                    },
+                    BidAmount = newBid.BidAmount,
+                    BidDate = bid.BidDate
+                };
+
+
+                var auction = await GetAuctionById(auctionId);
+
+                await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
+
+                _logger.LogInformation("addNewBid - artifactID: " + auction.ArtifactID);
+                _logger.LogInformation("addNewBid - bidAmount på nye bid: " + bid.BidAmount);
+
+
+                return Ok(result);
+            }
+            else
+            {
+                return BadRequest("User object is null");
+            }
+        }
+        else
+        {
+            return BadRequest("Failed to retrieve User object");
         }
     }
 
@@ -206,7 +314,6 @@ public class AuctionController : ControllerBase
 
 
     //PUT
-    [Authorize]
     [HttpPut("updateAuction/{auctionId}"), DisableRequestSizeLimit]
     public async Task<IActionResult> UpdateAuction(int auctionId, [FromBody] Auction? auction)
     {
@@ -233,7 +340,6 @@ public class AuctionController : ControllerBase
 
 
     //DELETE
-    [Authorize]
     [HttpDelete("deleteAuction/{auctionId}"), DisableRequestSizeLimit]
     public async Task<IActionResult> DeleteAuction(int auctionId)
     {
