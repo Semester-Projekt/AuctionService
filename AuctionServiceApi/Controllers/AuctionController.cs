@@ -43,7 +43,6 @@ public class AuctionController : ControllerBase
 
 
     //GET
-    [Authorize]
     [HttpGet("getallauctions")]
     public async Task<IActionResult> GetAllAuctions()
     {
@@ -69,7 +68,6 @@ public class AuctionController : ControllerBase
         return Ok(filteredAuctions);
     }
 
-    [Authorize]
     [HttpGet("getAuctionById/{auctionId}")]
     public async Task<IActionResult> GetAuctionById(int auctionId)
     {
@@ -95,7 +93,7 @@ public class AuctionController : ControllerBase
         return Ok(result);
     }
 
-    [Authorize]
+    /*
     [HttpGet("getartifactid/{id}")]
     public async Task<IActionResult> GetArtifactIdFromArtifactService(int id)
     {
@@ -103,7 +101,7 @@ public class AuctionController : ControllerBase
 
         using (HttpClient client = new HttpClient())
         {
-            string artifactServiceUrl = "http://localhost:5235";
+            string artifactServiceUrl = "http://auction:80";
             string getArtifactEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(artifactServiceUrl + getArtifactEndpoint);
@@ -131,8 +129,8 @@ public class AuctionController : ControllerBase
             return Ok(filteredArtifact);
         }
     }
+    */
 
-    [Authorize]
     [HttpGet("getAuctionsByCategoryCode/{categoryCode}"), DisableRequestSizeLimit]
     public async Task<IActionResult> GetAuctionsByCategoryCode(string categoryCode)
     {
@@ -150,7 +148,6 @@ public class AuctionController : ControllerBase
 
 
     //POST
-    [Authorize]
     [HttpPost("addauction/{id}")]
     public async Task<IActionResult> AddAuctionFromArtifactId(int id)
     {
@@ -158,7 +155,7 @@ public class AuctionController : ControllerBase
 
         using (HttpClient client = new HttpClient())
         {
-            string artifactServiceUrl = "http://localhost:5235";
+            string artifactServiceUrl = "http://catalogue:80";
             string getArtifactEndpoint = "/catalogue/getArtifactById/" + id;
 
             HttpResponseMessage response = await client.GetAsync(artifactServiceUrl + getArtifactEndpoint);
@@ -208,7 +205,6 @@ public class AuctionController : ControllerBase
 
 
     //PUT
-    [Authorize]
     [HttpPut("updateAuction/{auctionId}"), DisableRequestSizeLimit]
     public async Task<IActionResult> UpdateAuction(int auctionId, [FromBody] Auction? auction)
     {
@@ -235,7 +231,6 @@ public class AuctionController : ControllerBase
 
 
     //DELETE
-    [Authorize]
     [HttpDelete("deleteAuction/{auctionId}"), DisableRequestSizeLimit]
     public async Task<IActionResult> DeleteAuction(int auctionId)
     {
