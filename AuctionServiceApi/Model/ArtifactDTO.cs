@@ -26,8 +26,6 @@ namespace Model
         [BsonElement("CategoryCode")]
         public string? CategoryCode { get; set; }
 
-
-
         [BsonElement("Estimate")]
         public int? Estimate { get; set; }
 

@@ -26,13 +26,13 @@ namespace Model
 		public int ArtifactID { get; set; }
 
 		[BsonElement("CurrentBid")]
-		public Bid? CurrentBid { get; set; } = null;
+		public BidDTO? CurrentBid { get; set; } = null;
 
         [BsonElement("FinalBid")]
-        public Bid? FinalBid { get; set; } = null;
+        public BidDTO? FinalBid { get; set; } = null;
 
         [BsonElement("BidHistory")]
-        public List<Bid>? BidHistory { get; set; } = new List<Bid>();
+        public List<BidDTO>? BidHistory { get; set; } = new List<BidDTO>();
 
 
         public Auction(int auctionId, int artifactID)
