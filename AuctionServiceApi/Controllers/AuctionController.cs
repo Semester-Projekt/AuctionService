@@ -62,7 +62,8 @@ public class AuctionController : ControllerBase
             c.ArtifactID,
             c.AuctionEndDate,
             c.CurrentBid,
-            c.FinalBid
+            c.FinalBid,
+            c.BidHistory
         });
 
         return Ok(filteredAuctions);
@@ -100,7 +101,7 @@ public class AuctionController : ControllerBase
 
         using (HttpClient client = new HttpClient())
         {
-            string artifactServiceUrl = "http://auction:80";
+            string artifactServiceUrl = "http://catalogue:80";
             string getArtifactEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(artifactServiceUrl + getArtifactEndpoint);

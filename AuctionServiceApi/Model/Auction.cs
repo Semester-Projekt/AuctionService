@@ -32,7 +32,7 @@ namespace Model
         public Bid? FinalBid { get; set; } = null;
 
         [BsonElement("BidHistory")]
-        public List<Bid>? BidHistory { get; set; } = null;
+        public List<Bid>? BidHistory { get; set; } = new List<Bid>();
 
 
         public Auction(int auctionId, int artifactID)
