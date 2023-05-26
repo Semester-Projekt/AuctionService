@@ -29,6 +29,7 @@ public class AuctionController : ControllerBase
         _config = config;
         _logger = logger;
         _auctionRepository = userRepository;
+        _logger.LogInformation($"Connecting to rabbitMQ on {_config["rabbithostname"]}"); //tester om den kommer på rigtig rabbitserver
 
 
         //Logger host information
@@ -46,9 +47,9 @@ public class AuctionController : ControllerBase
         // Configure RabbitMQ connection settings
         var factory = new ConnectionFactory()
         {
-            HostName = "localhost", // Replace with your RabbitMQ server hostname
-            UserName = "guest",     // Replace with your RabbitMQ username
-            Password = "guest"      // Replace with your RabbitMQ password
+            HostName = _config["rabbithostname"], // Replace with your RabbitMQ server hostname
+        //    UserName = "guest",     // Replace with your RabbitMQ username
+       //     Password = "guest"      // Replace with your RabbitMQ password
         };
 
         using (var connection = factory.CreateConnection())
