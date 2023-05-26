@@ -9,6 +9,8 @@ using System.Net.Http.Json;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
+using System.Text.Json;
+using RabbitMQ.Client;
 
 namespace Controllers;
 
@@ -37,8 +39,41 @@ public class AuctionController : ControllerBase
 
     }
 
+    //RabbitMQ start
+    //  private object PublishNewArtifactMessage(Artifact newArtifact, object result)
+    private object PublishNewBidMessage(object result)
+    {
+        // Configure RabbitMQ connection settings
+        var factory = new ConnectionFactory()
+        {
+            HostName = "localhost", // Replace with your RabbitMQ server hostname
+            UserName = "guest",     // Replace with your RabbitMQ username
+            Password = "guest"      // Replace with your RabbitMQ password
+        };
 
-    
+        using (var connection = factory.CreateConnection())
+        using (var channel = connection.CreateModel())
+        {
+            // Declare a queue
+            channel.QueueDeclare(queue: "new-bid-queue",
+                                 durable: false,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: null);
+
+            // Convert newArtifact to a JSON string
+            var json = JsonSerializer.Serialize(result);
+
+            // Publish the message to the queue
+            var body = Encoding.UTF8.GetBytes(json);
+            channel.BasicPublish(exchange: "", routingKey: "new-bid-queue", basicProperties: null, body: body);
+        }
+
+        // Return the result object
+        return result;
+    }
+    //RabbitMQ slut
+
 
 
 
@@ -162,12 +197,13 @@ public class AuctionController : ControllerBase
 
         using (HttpClient client = new HttpClient())
         {
-            string userServiceUrl = "http://user:80";
+          //  string userServiceUrl = "http://user:80";
+            string userServiceUrl = "http://localhost:5030";
             string getUserEndpoint = "/user/getUser/" + id;
 
             _logger.LogInformation(userServiceUrl + getUserEndpoint);
 
-            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint);
+            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint); //Det her den fucker op
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "Failed to retrieve UserId from UserService");
@@ -244,13 +280,14 @@ public class AuctionController : ControllerBase
         }
     }
 
+    //RabbitMQ på AddNewBid!!!
     [HttpPost("addBid/{userId}/{auctionid}")] // DENNE METODE SKAL KØRE IGENNEM RABBIT, HOW???
     public async Task<IActionResult> AddNewBid([FromBody] Bid? bid, int userId, int auctionId)
     {
         _logger.LogInformation("AddNewBid function hit");
 
         var userResponse = await GetUserFromUserService(userId);
-        _logger.LogInformation("userresponse result: " + userResponse.Result);
+        
 
         if (userResponse.Result is ObjectResult objectResult && objectResult.Value is UserDTO user)
         {
@@ -264,7 +301,7 @@ public class AuctionController : ControllerBase
                 var newBid = new Bid
                 {
                     BidId = latestId,
-                    ArtifactId = bid!.ArtifactId,
+                    ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
                     BidAmount = bid.BidAmount
                 };
@@ -275,7 +312,7 @@ public class AuctionController : ControllerBase
 
                 var result = new
                 {
-                    ArtifactId = newBid.ArtifactId,
+                    AuctionId /*ArtifactId*/ = auctionId, //newBid.ArtifactId, //Ændret til AuctionId for at RabbitMQ modtager auctionid frem for artifactid
                     BidOwner = new
                     {
                         user.UserName,
@@ -293,6 +330,10 @@ public class AuctionController : ControllerBase
 
                 _logger.LogInformation("addNewBid - artifactID: " + auction.ArtifactID);
                 _logger.LogInformation("addNewBid - bidAmount på nye bid: " + bid.BidAmount);
+
+
+                // Publish the new artifact message to RabbitMQ
+                PublishNewBidMessage(result);
 
 
                 return Ok(result);
