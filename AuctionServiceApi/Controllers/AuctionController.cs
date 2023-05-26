@@ -81,15 +81,15 @@ public class AuctionController : ControllerBase
     [HttpGet("getallauctions")]
     public async Task<IActionResult> GetAllAuctions()
     {
-        _logger.LogInformation("GetAllAuctions function hit");
+        _logger.LogInformation("AuctionService - GetAllAuctions function hit");
 
         var auctions = _auctionRepository.GetAllAuctions().Result;
 
-        _logger.LogInformation("Total auctions: " + auctions.Count());
+        _logger.LogInformation("AuctionService - Total auctions: " + auctions.Count());
 
         if (auctions == null)
         {
-            return BadRequest("Auction list is empty");
+            return BadRequest("AuctionService - Auction list is empty");
         }
 
         
@@ -109,7 +109,7 @@ public class AuctionController : ControllerBase
     [HttpGet("getAuctionById/{auctionId}")]
     public async Task<Auction> GetAuctionById(int auctionId)
     {
-        _logger.LogInformation("GetAuctionById function hit");
+        _logger.LogInformation("AuctionService - GetAuctionById function hit");
 
         var auction = _auctionRepository.GetAuctionById(auctionId).Result;
 
@@ -155,21 +155,23 @@ public class AuctionController : ControllerBase
     }
     
     [HttpGet("getartifactid/{id}")]
-    public async Task<IActionResult> GetArtifactIdFromArtifactService(int id)
+    public async Task<IActionResult> GetArtifactIdFromCatalogueService(int id)
     {
-        _logger.LogInformation("GetArtifactIdFromArtifactService function hit");
+        _logger.LogInformation("AuctionService - GetArtifactIdFromCatalogueService function hit");
 
         using (HttpClient client = new HttpClient())
         {
-            string artifactServiceUrl = "http://catalogue:80";
-            string getArtifactEndpoint = "/catalogue/getArtifactById/" + id;
+            //string catalogueServiceUrl = "http://catalogue:80";
+            //string catalogueServiceUrl = "http://localhost:4000";
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
+            string getCatalogueEndpoint = "/catalogue/getArtifactById/" + id;
 
-            _logger.LogInformation(artifactServiceUrl + getArtifactEndpoint);
+            _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
 
-            HttpResponseMessage response = await client.GetAsync(artifactServiceUrl + getArtifactEndpoint);
+            HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
             if (!response.IsSuccessStatusCode)
             {
-                return StatusCode((int)response.StatusCode, "Failed to retrieve ArtifactID from ArtifactService");
+                return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve ArtifactID from CatalogueService");
             }
 
             // Deserialize the JSON response into an Artifact object
@@ -197,8 +199,11 @@ public class AuctionController : ControllerBase
 
         using (HttpClient client = new HttpClient())
         {
-          //  string userServiceUrl = "http://user:80";
-            string userServiceUrl = "http://localhost:5030";
+
+            //string userServiceUrl = "http://user:80";
+            //string userServiceUrl = "http://localhost:4000";
+            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL");
+
             string getUserEndpoint = "/user/getUser/" + id;
 
             _logger.LogInformation(userServiceUrl + getUserEndpoint);
@@ -206,22 +211,22 @@ public class AuctionController : ControllerBase
             HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint); //Det her den fucker op
             if (!response.IsSuccessStatusCode)
             {
-                return StatusCode((int)response.StatusCode, "Failed to retrieve UserId from UserService");
+                return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve UserId from UserService");
             }
 
             var userResponse = await response.Content.ReadFromJsonAsync<UserDTO>();
 
             if (userResponse != null)
             {
-                _logger.LogInformation($"MongId: {userResponse.MongoId}");
-                _logger.LogInformation($"UserName: {userResponse.UserName}");
+                _logger.LogInformation($"AuctionService - MongId: {userResponse.MongoId}");
+                _logger.LogInformation($"AuctionService - UserName: {userResponse.UserName}");
 
                 
                 return Ok(userResponse);
             }
             else
             {
-                return BadRequest("Failed to retrieve User object");
+                return BadRequest("AuctionService - Failed to retrieve User object");
             }
         }
     }
@@ -235,17 +240,21 @@ public class AuctionController : ControllerBase
     [HttpPost("addauction/{artifactID}")]
     public async Task<IActionResult> AddAuctionFromArtifactId(int artifactID)
     {
-        _logger.LogInformation("AddAuctionFromArtifactId function hit");
+        _logger.LogInformation("AuctionService - AddAuctionFromArtifactId function hit");
 
         using (HttpClient client = new HttpClient())
         {
-            string artifactServiceUrl = "http://catalogue:80";
-            string getArtifactEndpoint = "/catalogue/getArtifactById/" + artifactID;
+            //string catalogueServiceUrl = "http://catalogue:80";
+            //string catalogueServiceUrl = "http://localhost:4000";
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
+            string getCatalogueEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
-            HttpResponseMessage response = await client.GetAsync(artifactServiceUrl + getArtifactEndpoint);
+            _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
+
+            HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
             if (!response.IsSuccessStatusCode)
             {
-                return StatusCode((int)response.StatusCode, "Failed to retrieve ArtifactID from ArtifactService");
+                return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve ArtifactID from ArtifactService");
             }
 
 
@@ -266,7 +275,7 @@ public class AuctionController : ControllerBase
 
             // Add the new auction to the repository or perform necessary operations
             _auctionRepository.AddNewAuction(newAuction);
-            _logger.LogInformation("New Auction object added");
+            _logger.LogInformation("AuctionService - New Auction object added");
 
             var result = new
             {
@@ -284,16 +293,16 @@ public class AuctionController : ControllerBase
     [HttpPost("addBid/{userId}/{auctionid}")] // DENNE METODE SKAL KØRE IGENNEM RABBIT, HOW???
     public async Task<IActionResult> AddNewBid([FromBody] Bid? bid, int userId, int auctionId)
     {
-        _logger.LogInformation("AddNewBid function hit");
+        _logger.LogInformation("AuctionService - AddNewBid function hit");
 
         var userResponse = await GetUserFromUserService(userId);
-        
+
 
         if (userResponse.Result is ObjectResult objectResult && objectResult.Value is UserDTO user)
         {
             var latestId = await _auctionRepository.GetNextBidId();
 
-            _logger.LogInformation("BidId: " + latestId);
+            _logger.LogInformation("AuctionService - BidId: " + latestId);
 
             if (user != null)
             {
@@ -305,7 +314,7 @@ public class AuctionController : ControllerBase
                     BidOwner = user,
                     BidAmount = bid.BidAmount
                 };
-                _logger.LogInformation("new Bid object made. BidId: " + newBid.BidId);
+                _logger.LogInformation("AuctionService - new Bid object made. BidId: " + newBid.BidId);
 
                 _auctionRepository.AddNewBid(newBid);
 
@@ -328,8 +337,8 @@ public class AuctionController : ControllerBase
 
                 await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
 
-                _logger.LogInformation("addNewBid - artifactID: " + auction.ArtifactID);
-                _logger.LogInformation("addNewBid - bidAmount på nye bid: " + bid.BidAmount);
+                _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
+                _logger.LogInformation("AuctionService - addNewBid - bidAmount på nye bid: " + bid.BidAmount);
 
 
                 // Publish the new artifact message to RabbitMQ
@@ -340,12 +349,12 @@ public class AuctionController : ControllerBase
             }
             else
             {
-                return BadRequest("User object is null");
+                return BadRequest("AuctionService - User object is null");
             }
         }
         else
         {
-            return BadRequest("Failed to retrieve User object");
+            return BadRequest("AuctionService - Failed to retrieve User object");
         }
     }
 
@@ -358,15 +367,15 @@ public class AuctionController : ControllerBase
     [HttpPut("updateAuction/{auctionId}"), DisableRequestSizeLimit]
     public async Task<IActionResult> UpdateAuction(int auctionId, [FromBody] Auction? auction)
     {
-        _logger.LogInformation("UpdateAuction function hit");
+        _logger.LogInformation("AuctionService - UpdateAuction function hit");
 
         var updatedAuction = await _auctionRepository.GetAuctionById(auctionId);
 
         if (updatedAuction == null)
         {
-            return BadRequest("Auction does not exist");
+            return BadRequest("AuctionService - Auction does not exist");
         }
-        _logger.LogInformation("Auction for update: " + updatedAuction.AuctionId);
+        _logger.LogInformation("AuctionService - Auction for update: " + updatedAuction.AuctionId);
 
         await _auctionRepository.UpdateAuction(auctionId, auction!);
 
@@ -376,7 +385,7 @@ public class AuctionController : ControllerBase
     }
 
 
-
+    
 
 
 
@@ -384,22 +393,22 @@ public class AuctionController : ControllerBase
     [HttpDelete("deleteAuction/{auctionId}"), DisableRequestSizeLimit]
     public async Task<IActionResult> DeleteAuction(int auctionId)
     {
-        _logger.LogInformation("DeleteAuction function hit");
+        _logger.LogInformation("AuctionService - DeleteAuction function hit");
 
         var deletedAuction = await _auctionRepository.GetAuctionById(auctionId);
 
         if (deletedAuction == null)
         {
-            return BadRequest("No auction with id: " + auctionId);
+            return BadRequest("AuctionService - No auction with id: " + auctionId);
         }
         else if (deletedAuction.CurrentBid != null && deletedAuction.FinalBid == null)
         {
-            return BadRequest("Cannot delete auction with active bids");
+            return BadRequest("AuctionService - Cannot delete auction with active bids");
         }
         else await _auctionRepository.DeleteAuction(auctionId);
-        _logger.LogInformation($"Auction with id: {auctionId} deleted");
+        _logger.LogInformation($"AuctionService - Auction with id: {auctionId} deleted");
 
-        return Ok($"Auction has been deleted");
+        return Ok($"AuctionService - Auction has been deleted");
     }
 
 
