@@ -204,7 +204,7 @@ public class AuctionController : ControllerBase
 
             _logger.LogInformation(userServiceUrl + getUserEndpoint);
 
-            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint); //Det her den fucker op
+            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve UserId from UserService");
@@ -245,7 +245,7 @@ public class AuctionController : ControllerBase
             string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
-            _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
+            _logger.LogInformation($"AuctionService: {catalogueServiceUrl + getCatalogueEndpoint}");
 
             HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
             if (!response.IsSuccessStatusCode)
@@ -257,7 +257,7 @@ public class AuctionController : ControllerBase
             // Deserialize the JSON response into an Artifact object
             ArtifactDTO artifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
 
-            int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _artifacts + 1
+            int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _auctions + 1
 
             // GetArtifactById til at hente det ArtifactID man vil sende til newAuction
 
@@ -283,15 +283,20 @@ public class AuctionController : ControllerBase
                     ArtifactID = newAuction.ArtifactID
                 };
 
-                _logger.LogInformation($"result: {result.ArtifactID} + {result.AuctionEndDate}");
+                _logger.LogInformation($"result: ArtifactID: {result.ArtifactID} + AuctionEndDate: {result.AuctionEndDate}");
 
-                _logger.LogInformation("AuctionService - current Artifact.Status: " + artifact.Status);
-                string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID;
-                _logger.LogInformation(catalogueServiceUrl + getActivationEndpoint);
-                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null);
-                _logger.LogInformation("AuctionService - new Artifact.Status: " + artifact.Status);
-                _logger.LogInformation("AuctionService - ActivationResponse: " + activationResponse.Content);
 
+                _logger.LogInformation($"AuctionService - current Artifact.Status: {artifact.Status}");
+
+                string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID; // Call activateArtifact endpoint to change Artifact status to 'Active'
+
+                _logger.LogInformation($"AuctionService - {catalogueServiceUrl + getActivationEndpoint}");
+
+                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
+
+                _logger.LogInformation($"AuctionService - new Artifact.Status: {artifact.Status}");
+
+                
                 return Ok(result);
             }
             else
