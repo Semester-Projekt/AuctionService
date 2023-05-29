@@ -287,7 +287,7 @@ public class AuctionController : ControllerBase
 
                 
                 string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID;
-                _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
+                _logger.LogInformation(catalogueServiceUrl + getActivationEndpoint);
                 HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getCatalogueEndpoint, null);
                 _logger.LogInformation("AuctionService - ActivationResponse: " + activationResponse.Content);
 
