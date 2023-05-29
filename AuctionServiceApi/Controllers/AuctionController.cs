@@ -285,10 +285,11 @@ public class AuctionController : ControllerBase
 
                 _logger.LogInformation($"result: {result.ArtifactID} + {result.AuctionEndDate}");
 
-                
+                _logger.LogInformation("AuctionService - current Artifact.Status: " + artifact.Status);
                 string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID;
                 _logger.LogInformation(catalogueServiceUrl + getActivationEndpoint);
                 HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null);
+                _logger.LogInformation("AuctionService - new Artifact.Status: " + artifact.Status);
                 _logger.LogInformation("AuctionService - ActivationResponse: " + activationResponse.Content);
 
                 return Ok(result);
