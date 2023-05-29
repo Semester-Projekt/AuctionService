@@ -119,9 +119,10 @@ public class AuctionController : ControllerBase
         var bidHistory = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID);
         auction.BidHistory = (List<Bid>?)bidHistory.OrderByDescending(b => b.BidDate).ToList();
 
-
+        /*
         int? currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault()!.BidAmount;
         auction.CurrentBid = currentBid;
+        */
 
         int? finalBid;
         if (auction.AuctionEndDate < DateTime.Now)
@@ -137,7 +138,7 @@ public class AuctionController : ControllerBase
         {
             ArtifactID = auction.ArtifactID,
             AuctionEndDate = auction.AuctionEndDate,
-            CurrentBid = currentBid,
+            CurrentBid = auction.CurrentBid,
             FinalBid = finalBid,
             BidHistory = auction.BidHistory!.Select(b => new
             {
