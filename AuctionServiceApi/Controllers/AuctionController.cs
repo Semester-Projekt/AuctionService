@@ -119,8 +119,8 @@ public class AuctionController : ControllerBase
         var bidHistory = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID);
         auction.BidHistory = (List<Bid>?)bidHistory.OrderByDescending(b => b.BidDate).ToList();
 
-        //var currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
-        //auction.CurrentBid = currentBid;
+        var currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
+        auction.CurrentBid = currentBid;
 
         int? finalBid;
         if (auction.AuctionEndDate < DateTime.Now)
@@ -136,7 +136,7 @@ public class AuctionController : ControllerBase
         {
             ArtifactID = auction.ArtifactID,
             AuctionEndDate = auction.AuctionEndDate,
-            //CurrentBid = currentBid,
+            CurrentBid = currentBid,
             FinalBid = finalBid,
             BidHistory = auction.BidHistory!.Select(b => new
             {
@@ -163,8 +163,8 @@ public class AuctionController : ControllerBase
         using (HttpClient client = new HttpClient())
         {
             //string catalogueServiceUrl = "http://catalogue:80";
-            string catalogueServiceUrl = "http://localhost:4000";
-            //string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
+            //string catalogueServiceUrl = "http://localhost:4000";
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
@@ -202,8 +202,8 @@ public class AuctionController : ControllerBase
         {
 
             //string userServiceUrl = "http://user:80";
-            string userServiceUrl = "http://localhost:4000";
-            //string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL");
+            //string userServiceUrl = "http://localhost:4000";
+            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL");
 
             string getUserEndpoint = "/user/getUser/" + id;
 
