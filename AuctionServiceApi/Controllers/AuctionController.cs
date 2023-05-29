@@ -48,8 +48,8 @@ public class AuctionController : ControllerBase
         var factory = new ConnectionFactory()
         {
             HostName = _config["rabbithostname"], // Replace with your RabbitMQ server hostname
-        //    UserName = "guest",     // Replace with your RabbitMQ username
-       //     Password = "guest"      // Replace with your RabbitMQ password
+                                                  //    UserName = "guest",     // Replace with your RabbitMQ username
+                                                  //     Password = "guest"      // Replace with your RabbitMQ password
         };
 
         using (var connection = factory.CreateConnection())
@@ -93,7 +93,7 @@ public class AuctionController : ControllerBase
             return BadRequest("AuctionService - Auction list is empty");
         }
 
-        
+
 
         var filteredAuctions = auctions.Select(c => new
         {
@@ -114,7 +114,7 @@ public class AuctionController : ControllerBase
 
         var auction = _auctionRepository.GetAuctionById(auctionId).Result;
 
-        
+
 
         var bidHistory = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID);
         auction.BidHistory = (List<Bid>?)bidHistory.OrderByDescending(b => b.BidDate).ToList();
@@ -154,7 +154,7 @@ public class AuctionController : ControllerBase
         return auction;
         //return Ok(result);
     }
-    
+
     [HttpGet("getartifactid/{id}")]
     public async Task<IActionResult> GetArtifactIdFromCatalogueService(int id)
     {
@@ -222,7 +222,7 @@ public class AuctionController : ControllerBase
                 _logger.LogInformation($"AuctionService - MongId: {userResponse.MongoId}");
                 _logger.LogInformation($"AuctionService - UserName: {userResponse.UserName}");
 
-                
+
                 return Ok(userResponse);
             }
             else
@@ -231,7 +231,7 @@ public class AuctionController : ControllerBase
             }
         }
     }
-    
+
 
 
 
@@ -263,7 +263,7 @@ public class AuctionController : ControllerBase
             ArtifactDTO artifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
 
             int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _artifacts + 1
-            
+
             // GetArtifactById til at hente det ArtifactID man vil sende til newAuction
 
 
@@ -330,19 +330,25 @@ public class AuctionController : ControllerBase
                         user.UserPhone
                     },
                     BidAmount = newBid.BidAmount,
-                    BidDate = bid.BidDate
+                    BidDate = newBid.BidDate
                 };
 
                 var auction = await GetAuctionById(auctionId);
 
                 int? currentBid = auction.CurrentBid;
+                
+                _logger.LogInformation("AuctionService - addNewBid - current bid: " + currentBid);
 
-                if (newBid.BidAmount < currentBid)
+                _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
+
+                _logger.LogInformation("AuctionService - addNewBid - bidAmount på newBid: " + newBid.BidAmount);
+                _logger.LogInformation("AuctionService - addNewBid - bidAmount på bid: " + bid.BidAmount);
+
+                if (newBid.BidAmount > currentBid)
                 {
                     await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
 
-                    _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
-                    _logger.LogInformation("AuctionService - addNewBid - bidAmount på nye bid: " + bid.BidAmount);
+
 
 
                     // Publish the new artifact message to RabbitMQ
@@ -394,7 +400,7 @@ public class AuctionController : ControllerBase
     }
 
 
-    
+
 
 
 
