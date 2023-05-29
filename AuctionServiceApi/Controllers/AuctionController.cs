@@ -11,6 +11,20 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using RabbitMQ.Client;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
+using Controllers;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Channels;
+using System.Net;
+using Microsoft.AspNetCore.Http;
+using MongoDB.Driver;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using System.IO;
+using System.Diagnostics;
 
 namespace Controllers;
 
@@ -76,6 +90,7 @@ public class AuctionController : ControllerBase
     //RabbitMQ slut
 
 
+    
     // VERSION_ENDEPUNKT
     [HttpGet("version")]
     public async Task<Dictionary<string, string>> GetVersion()
