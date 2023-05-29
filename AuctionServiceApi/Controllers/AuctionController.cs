@@ -119,7 +119,8 @@ public class AuctionController : ControllerBase
         var bidHistory = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID);
         auction.BidHistory = (List<Bid>?)bidHistory.OrderByDescending(b => b.BidDate).ToList();
 
-        var currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
+
+        int? currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault()!.BidAmount;
         auction.CurrentBid = currentBid;
 
         int? finalBid;
