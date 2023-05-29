@@ -333,20 +333,28 @@ public class AuctionController : ControllerBase
                     BidDate = bid.BidDate
                 };
 
-
                 var auction = await GetAuctionById(auctionId);
 
-                await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
+                int? currentBid = auction.CurrentBid;
 
-                _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
-                _logger.LogInformation("AuctionService - addNewBid - bidAmount på nye bid: " + bid.BidAmount);
+                if (newBid.BidAmount < currentBid)
+                {
+                    await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
+
+                    _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
+                    _logger.LogInformation("AuctionService - addNewBid - bidAmount på nye bid: " + bid.BidAmount);
 
 
-                // Publish the new artifact message to RabbitMQ
-                PublishNewBidMessage(result);
+                    // Publish the new artifact message to RabbitMQ
+                    PublishNewBidMessage(result);
 
 
-                return Ok(result);
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest($"Your bid of {newBid.BidAmount} is lower than the current bid");
+                }
             }
             else
             {
