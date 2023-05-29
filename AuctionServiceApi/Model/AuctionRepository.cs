@@ -9,8 +9,8 @@ using System.ComponentModel.DataAnnotations;
 
 namespace Model
 {
-	public class AuctionRepository
-	{
+    public class AuctionRepository
+    {
         private readonly IMongoCollection<Auction> _auctions;
         private readonly IMongoCollection<Bid> _bids;
 
@@ -79,7 +79,7 @@ namespace Model
         }
 
 
-        
+
 
 
 
@@ -103,6 +103,7 @@ namespace Model
 
             await _auctions.UpdateOneAsync(filter, update);
         }
+
 
 
 

@@ -93,7 +93,7 @@ public class AuctionController : ControllerBase
             return BadRequest("AuctionService - Auction list is empty");
         }
 
-
+        
 
         var filteredAuctions = auctions.Select(c => new
         {
@@ -113,17 +113,10 @@ public class AuctionController : ControllerBase
         _logger.LogInformation("AuctionService - GetAuctionById function hit");
 
         var auction = _auctionRepository.GetAuctionById(auctionId).Result;
-
-
-
+        
         var bidHistory = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID);
         auction.BidHistory = (List<Bid>?)bidHistory.OrderByDescending(b => b.BidDate).ToList();
-
-        /*
-        int? currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault()!.BidAmount;
-        auction.CurrentBid = currentBid;
-        */
-
+        
         int? finalBid;
         if (auction.AuctionEndDate < DateTime.Now)
         {
@@ -277,18 +270,35 @@ public class AuctionController : ControllerBase
             };
 
             // Add the new auction to the repository or perform necessary operations
-            _auctionRepository.AddNewAuction(newAuction);
-            _logger.LogInformation("AuctionService - New Auction object added");
 
-            var result = new
+            if (artifact.Status != "Active")
             {
-                AuctionEndDate = newAuction.AuctionEndDate,
-                ArtifactID = newAuction.ArtifactID
-            };
+                _auctionRepository.AddNewAuction(newAuction);
 
-            _logger.LogInformation($"result: {result.ArtifactID} + {result.AuctionEndDate}");
+                _logger.LogInformation("AuctionService - New Auction object added");
 
-            return Ok(result);
+                var result = new
+                {
+                    AuctionEndDate = newAuction.AuctionEndDate,
+                    ArtifactID = newAuction.ArtifactID
+                };
+
+                _logger.LogInformation($"result: {result.ArtifactID} + {result.AuctionEndDate}");
+
+                
+                string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID;
+                _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
+                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getCatalogueEndpoint, null);
+                _logger.LogInformation("AuctionService - ActivationResponse: " + activationResponse.Content);
+
+                return Ok(result);
+            }
+            else
+            {
+                _logger.LogInformation("AuctionService - selected artifacID: " + artifact.ArtifactID);
+                _logger.LogInformation("AuctionService - selected artifacName: " + artifact.ArtifactName);
+                return BadRequest("AuctionService - Artifact is already on auction");
+            }
         }
     }
 
