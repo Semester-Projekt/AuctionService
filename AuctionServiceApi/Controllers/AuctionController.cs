@@ -400,6 +400,9 @@ public class AuctionController : ControllerBase
 
                 await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid); //Rabbit if-sætning her i guess
 
+                var aucton = await GetAuctionById(auctionId);
+
+                int? currentBid = auction.CurrentBid;
 
                 _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
 
