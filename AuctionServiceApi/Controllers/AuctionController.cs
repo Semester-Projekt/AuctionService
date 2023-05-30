@@ -39,11 +39,11 @@ public class AuctionController : ControllerBase
     //docker test
 
     public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository)
-    {
+    {   
         _config = config;
         _logger = logger;
         _auctionRepository = userRepository;
-        _logger.LogInformation($"Connecting to rabbitMQ on {_config["rabbithostname"]}"); //tester om den kommer på rigtig rabbitserver
+        _logger.LogInformation($"Connecting to rabbitMQ on {_config["rabbithostname"]}"); //tester om den kommer på rigtig rabbitserver. Skrives i logs.
 
 
         //Logger host information
@@ -398,9 +398,8 @@ public class AuctionController : ControllerBase
 
                 var auction = await GetAuctionById(auctionId);
 
-                int? currentBid = auction.CurrentBid;
-                
-                _logger.LogInformation("AuctionService - addNewBid - current bid: " + currentBid);
+                await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid); //Rabbit if-sætning her i guess
+
 
                 _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
 
