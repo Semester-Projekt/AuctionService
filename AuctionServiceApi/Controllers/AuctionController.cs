@@ -11,6 +11,20 @@ using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using System.Text.Json;
 using RabbitMQ.Client;
+using System.Reflection;
+using Microsoft.EntityFrameworkCore;
+using Controllers;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Channels;
+using System.Net;
+using Microsoft.AspNetCore.Http;
+using MongoDB.Driver;
+using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
+using System.IO;
+using System.Diagnostics;
 
 namespace Controllers;
 
@@ -48,8 +62,8 @@ public class AuctionController : ControllerBase
         var factory = new ConnectionFactory()
         {
             HostName = _config["rabbithostname"], // Replace with your RabbitMQ server hostname
-        //    UserName = "guest",     // Replace with your RabbitMQ username
-       //     Password = "guest"      // Replace with your RabbitMQ password
+                                                  //    UserName = "guest",     // Replace with your RabbitMQ username
+                                                  //     Password = "guest"      // Replace with your RabbitMQ password
         };
 
         using (var connection = factory.CreateConnection())
@@ -76,8 +90,39 @@ public class AuctionController : ControllerBase
     //RabbitMQ slut
 
 
+    
+    // VERSION_ENDEPUNKT
+    [HttpGet("version")]
+    public async Task<Dictionary<string, string>> GetVersion()
+    {
+        var properties = new Dictionary<string, string>();
+        var assembly = typeof(Program).Assembly;
+
+        properties.Add("service", "Auction");
+        var ver = FileVersionInfo.GetVersionInfo(typeof(Program).Assembly.Location).ProductVersion;
+        properties.Add("version", ver!);
+
+        try
+        {
+            var hostName = System.Net.Dns.GetHostName();
+            var ips = await System.Net.Dns.GetHostAddressesAsync(hostName);
+            var ipa = ips.First().MapToIPv4().ToString();
+            properties.Add("hosted-at-address", ipa);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex.Message);
+            properties.Add("hosted-at-address", "Could not resolve IP-address");
+        }
+
+        return properties;
+    }
 
 
+
+
+    
+    
     //GET
     [HttpGet("getallauctions")]
     public async Task<IActionResult> GetAllAuctions()
@@ -113,15 +158,10 @@ public class AuctionController : ControllerBase
         _logger.LogInformation("AuctionService - GetAuctionById function hit");
 
         var auction = _auctionRepository.GetAuctionById(auctionId).Result;
-
         
-
         var bidHistory = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID);
         auction.BidHistory = (List<Bid>?)bidHistory.OrderByDescending(b => b.BidDate).ToList();
-
-        var currentBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
-        auction.CurrentBid = currentBid;
-
+        
         int? finalBid;
         if (auction.AuctionEndDate < DateTime.Now)
         {
@@ -136,7 +176,7 @@ public class AuctionController : ControllerBase
         {
             ArtifactID = auction.ArtifactID,
             AuctionEndDate = auction.AuctionEndDate,
-            CurrentBid = currentBid,
+            CurrentBid = auction.CurrentBid,
             FinalBid = finalBid,
             BidHistory = auction.BidHistory!.Select(b => new
             {
@@ -154,7 +194,7 @@ public class AuctionController : ControllerBase
         return auction;
         //return Ok(result);
     }
-    
+
     [HttpGet("getartifactid/{id}")]
     public async Task<IActionResult> GetArtifactIdFromCatalogueService(int id)
     {
@@ -209,7 +249,7 @@ public class AuctionController : ControllerBase
 
             _logger.LogInformation(userServiceUrl + getUserEndpoint);
 
-            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint); //Det her den fucker op
+            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve UserId from UserService");
@@ -222,7 +262,7 @@ public class AuctionController : ControllerBase
                 _logger.LogInformation($"AuctionService - MongId: {userResponse.MongoId}");
                 _logger.LogInformation($"AuctionService - UserName: {userResponse.UserName}");
 
-                
+
                 return Ok(userResponse);
             }
             else
@@ -231,7 +271,7 @@ public class AuctionController : ControllerBase
             }
         }
     }
-    
+
 
 
 
@@ -250,7 +290,7 @@ public class AuctionController : ControllerBase
             string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
-            _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
+            _logger.LogInformation($"AuctionService: {catalogueServiceUrl + getCatalogueEndpoint}");
 
             HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
             if (!response.IsSuccessStatusCode)
@@ -262,8 +302,8 @@ public class AuctionController : ControllerBase
             // Deserialize the JSON response into an Artifact object
             ArtifactDTO artifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
 
-            int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _artifacts + 1
-            
+            int latestID = _auctionRepository.GetNextAuctionId(); // Gets latest ID in _auctions + 1
+
             // GetArtifactById til at hente det ArtifactID man vil sende til newAuction
 
 
@@ -275,18 +315,41 @@ public class AuctionController : ControllerBase
             };
 
             // Add the new auction to the repository or perform necessary operations
-            _auctionRepository.AddNewAuction(newAuction);
-            _logger.LogInformation("AuctionService - New Auction object added");
 
-            var result = new
+            if (artifact.Status != "Active")
             {
-                AuctionEndDate = newAuction.AuctionEndDate,
-                ArtifactID = newAuction.ArtifactID
-            };
+                _auctionRepository.AddNewAuction(newAuction);
 
-            _logger.LogInformation($"result: {result.ArtifactID} + {result.AuctionEndDate}");
+                _logger.LogInformation("AuctionService - New Auction object added");
 
-            return Ok(result);
+                var result = new
+                {
+                    AuctionEndDate = newAuction.AuctionEndDate,
+                    ArtifactID = newAuction.ArtifactID
+                };
+
+                _logger.LogInformation($"result: ArtifactID: {result.ArtifactID} + AuctionEndDate: {result.AuctionEndDate}");
+
+
+                _logger.LogInformation($"AuctionService - current Artifact.Status: {artifact.Status}");
+
+                string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID; // Call activateArtifact endpoint to change Artifact status to 'Active'
+
+                _logger.LogInformation($"AuctionService - {catalogueServiceUrl + getActivationEndpoint}");
+
+                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
+
+                _logger.LogInformation($"AuctionService - new Artifact.Status: {artifact.Status}");
+
+                
+                return Ok(result);
+            }
+            else
+            {
+                _logger.LogInformation("AuctionService - selected artifacID: " + artifact.ArtifactID);
+                _logger.LogInformation("AuctionService - selected artifacName: " + artifact.ArtifactName);
+                return BadRequest("AuctionService - Artifact is already on auction");
+            }
         }
     }
 
@@ -330,23 +393,36 @@ public class AuctionController : ControllerBase
                         user.UserPhone
                     },
                     BidAmount = newBid.BidAmount,
-                    BidDate = bid.BidDate
+                    BidDate = newBid.BidDate
                 };
-
 
                 var auction = await GetAuctionById(auctionId);
 
                 await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid); //Rabbit if-sætning her i guess
 
+
                 _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
-                _logger.LogInformation("AuctionService - addNewBid - bidAmount på nye bid: " + bid.BidAmount);
+
+                _logger.LogInformation("AuctionService - addNewBid - bidAmount på newBid: " + newBid.BidAmount);
+                _logger.LogInformation("AuctionService - addNewBid - bidAmount på bid: " + bid.BidAmount);
+
+                if (newBid.BidAmount > currentBid)
+                {
+                    await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
 
 
-                // Publish the new artifact message to RabbitMQ
-                PublishNewBidMessage(result);
 
 
-                return Ok(result);
+                    // Publish the new artifact message to RabbitMQ
+                    PublishNewBidMessage(result);
+
+
+                    return Ok(result);
+                }
+                else
+                {
+                    return BadRequest($"Your bid of {newBid.BidAmount} is lower than the current bid");
+                }
             }
             else
             {
@@ -386,7 +462,7 @@ public class AuctionController : ControllerBase
     }
 
 
-    
+
 
 
 
