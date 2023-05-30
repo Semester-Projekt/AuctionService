@@ -43,6 +43,7 @@ try // try/catch/finally fra m10.01 opgave b step 4
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
+    builder.Logging.ClearProviders();
     //Brug NLog som logger fremadrettet
     builder.Host.UseNLog();
 

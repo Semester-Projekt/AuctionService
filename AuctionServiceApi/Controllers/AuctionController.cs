@@ -25,6 +25,7 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Diagnostics;
+using NLog;
 
 namespace Controllers;
 
