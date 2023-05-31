@@ -63,8 +63,8 @@ public class AuctionController : ControllerBase
         var factory = new ConnectionFactory()
         {
             HostName = _config["rabbithostname"], // Replace with your RabbitMQ server hostname
-                                                  //    UserName = "guest",     // Replace with your RabbitMQ username
-                                                  //     Password = "guest"      // Replace with your RabbitMQ password
+            UserName = "worker",     // Replace with your RabbitMQ username
+            Password = "1234"      // Replace with your RabbitMQ password
         };
 
         using (var connection = factory.CreateConnection())
