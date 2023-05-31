@@ -58,30 +58,8 @@ public class AuctionController : ControllerBase
         var _ipaddr = ips.First().MapToIPv4().ToString();
         _logger.LogInformation(1, $"Auth service responding from {_ipaddr}");
 
-//Receiver start
-        //
-        StartReceivingBidData();
-        //
     }
 
-    private void StartReceivingBidData()
-    {
-        var consumer = new EventingBasicConsumer(_channel);
-        consumer.Received += (model, ea) =>
-        {
-            var body = ea.Body.ToArray();
-            var message = Encoding.UTF8.GetString(body);
-            Console.WriteLine($" [x] Received {message}");
-
-            // Process the received message here
-            // ...
-
-            _channel.BasicAck(ea.DeliveryTag, false);
-        };
-
-        _channel.BasicConsume(queue: "bid-data-queue", autoAck: false, consumer: consumer);
-    }
-    //Receiver slut
 
     //RabbitMQ start
     //  private object PublishNewArtifactMessage(Artifact newArtifact, object result)
