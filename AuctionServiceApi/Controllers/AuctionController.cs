@@ -302,14 +302,24 @@ public class AuctionController : ControllerBase
     {
         _logger.LogInformation("AuctionService - AddAuctionFromArtifactId function hit");
 
-        using (HttpClient client = new HttpClient())
+        using (HttpClient _httpClient = new HttpClient())
         {
             string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
             _logger.LogInformation($"AuctionService: {catalogueServiceUrl + getCatalogueEndpoint}");
 
-            HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
+            var tokenValue = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+            _logger.LogInformation("AuctionService - token first default: " + tokenValue);
+            var token = tokenValue?.Replace("Bearer ", "");
+            _logger.LogInformation("AuctionService - token w/o bearer: " + token);
+
+            // Create a new HttpRequestMessage to include the token
+            var request = new HttpRequestMessage(HttpMethod.Get, catalogueServiceUrl + getCatalogueEndpoint);
+            //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve ArtifactID from ArtifactService");
@@ -342,18 +352,17 @@ public class AuctionController : ControllerBase
 
                 _logger.LogInformation($"result: ArtifactID: {newAuction.ArtifactID} + AuctionEndDate: {newAuction.AuctionEndDate}");
 
-
                 _logger.LogInformation($"AuctionService - current Artifact.Status: {artifact.Status}");
 
                 string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID; // Call activateArtifact endpoint to change Artifact status to 'Active'
 
                 _logger.LogInformation($"AuctionService - {catalogueServiceUrl + getActivationEndpoint}");
-
-                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
+                
+                HttpResponseMessage activationResponse = await _httpClient.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
 
                 _logger.LogInformation($"AuctionService - new Artifact.Status: {artifact.Status}");
 
-                
+
                 return Ok(newAuction);
             }
             else
