@@ -358,10 +358,6 @@ public class AuctionController : ControllerBase
                 
                 HttpResponseMessage activationResponse = await _httpClient.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
 
-                var updatedArtifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
-
-                _logger.LogInformation($"AuctionService - new Artifact.Status: {updatedArtifact.Status}");
-
                 _auctionRepository.AddNewAuction(newAuction);
 
                 return Ok(newAuction);
