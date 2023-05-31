@@ -28,6 +28,8 @@ using System.Diagnostics;
 using NLog;
 using MongoDB.Driver.Core.Bindings;
 using RabbitMQ.Client.Events;
+using System.Net.Http.Headers;
+using System.Net.Http;
 
 namespace Controllers;
 
@@ -203,6 +205,7 @@ public class AuctionController : ControllerBase
         return Ok(auctions);
     }
 
+    [Authorize]
     [HttpGet("getAuctionById/{auctionId}")]
     public async Task<Auction> GetAuctionById(int auctionId)
     {
@@ -271,16 +274,8 @@ public class AuctionController : ControllerBase
 
             // Extract the ArtifactID from the deserialized Artifact object
             int artifactId = (int)artifact!.ArtifactID!;
-
-
-            var filteredArtifact = new
-            {
-                artifact.ArtifactName,
-                artifact.ArtifactDescription,
-                artifact.ArtifactPicture
-            };
-
-            return Ok(filteredArtifact);
+            
+            return Ok(artifact);
         }
     }
 
@@ -289,18 +284,26 @@ public class AuctionController : ControllerBase
     {
         _logger.LogInformation("AuctionService - GetUser function hit");
 
-        using (HttpClient client = new HttpClient())
+        using (HttpClient _httpClient = new HttpClient())
         {
-
-            //string userServiceUrl = "http://user:80";
-            //string userServiceUrl = "http://localhost:4000";
             string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL")!;
-
             string getUserEndpoint = "/user/getUser/" + id;
 
             _logger.LogInformation(userServiceUrl + getUserEndpoint);
 
-            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint);
+            // Retrieve the current user's token from the request
+            var tokenValue = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+            _logger.LogInformation("CatalogueService - token first default: " + tokenValue);
+            var token = tokenValue?.Replace("Bearer ", "");
+            _logger.LogInformation("CatalogueService - token w/o bearer: " + token);
+
+            // Create a new HttpRequestMessage to include the token
+            var request = new HttpRequestMessage(HttpMethod.Get, userServiceUrl + getUserEndpoint);
+            //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // Send the request to the AuctionService API to retrieve all auctions
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve UserId from UserService");
@@ -334,16 +337,27 @@ public class AuctionController : ControllerBase
     {
         _logger.LogInformation("AuctionService - AddAuctionFromArtifactId function hit");
 
-        using (HttpClient client = new HttpClient())
+        using (HttpClient _httpClient = new HttpClient())
         {
-            //string catalogueServiceUrl = "http://catalogue:80";
-            //string catalogueServiceUrl = "http://localhost:4000";
-            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL")!;
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
             _logger.LogInformation($"AuctionService: {catalogueServiceUrl + getCatalogueEndpoint}");
 
-            HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
+            // Retrieve the current user's token from the request
+            var tokenValue = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+            _logger.LogInformation("CatalogueService - token first default: " + tokenValue);
+            var token = tokenValue?.Replace("Bearer ", "");
+            _logger.LogInformation("CatalogueService - token w/o bearer: " + token);
+
+            // Create a new HttpRequestMessage to include the token
+            var request = new HttpRequestMessage(HttpMethod.Get, catalogueServiceUrl + getCatalogueEndpoint);
+            //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            // Send the request to the UserService API to retrieve the user
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
+
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve ArtifactID from ArtifactService");
@@ -388,7 +402,7 @@ public class AuctionController : ControllerBase
 
                 _logger.LogInformation($"AuctionService - {catalogueServiceUrl + getActivationEndpoint}");
 
-                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
+                HttpResponseMessage activationResponse = await _httpClient.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
 
                 _logger.LogInformation($"AuctionService - new Artifact.Status: {artifact.Status}");
 
