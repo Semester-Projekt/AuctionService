@@ -220,7 +220,7 @@ public class AuctionController : ControllerBase
             ArtifactDTO artifact = await response.Content.ReadFromJsonAsync<ArtifactDTO>();
 
             // Extract the ArtifactID from the deserialized Artifact object
-            int artifactId = artifact.ArtifactID;
+            int artifactId = (int)artifact!.ArtifactID!;
 
 
             var filteredArtifact = new
