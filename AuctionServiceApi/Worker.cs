@@ -29,7 +29,7 @@ namespace BidServiceWorker
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
 
-            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); // 30 sekunder delay på connect til rabbitMQ - fikser måske fejl emd den ik gider hente bid-data-queue
+        //    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); // 30 sekunder delay på connect til rabbitMQ - fikser måske fejl emd den ik gider hente bid-data-queue
 
             var factory = new ConnectionFactory()
             {
@@ -68,8 +68,10 @@ namespace BidServiceWorker
             try
             {
                 var consumer = new EventingBasicConsumer(_channel);
-                consumer.Received += (model, ea) =>
+                consumer.Received += async (model, ea) =>
                 {
+                    await Task.Delay(TimeSpan.FromSeconds(40)); // Add a delay of 40 seconds before consuming the message
+
                     var body = ea.Body.ToArray();
                     var message = Encoding.UTF8.GetString(body);
                     Console.WriteLine($" [x] Received {message}");
