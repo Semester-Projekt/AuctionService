@@ -26,10 +26,6 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Diagnostics;
 using NLog;
-using MongoDB.Driver.Core.Bindings;
-using RabbitMQ.Client.Events;
-using System.Net.Http.Headers;
-using System.Net.Http;
 
 namespace Controllers;
 
@@ -68,40 +64,29 @@ public class AuctionController : ControllerBase
         {
             HostName = _config["rabbithostname"], // Replace with your RabbitMQ server hostname
             UserName = "worker",     // Replace with your RabbitMQ username
-            Password = "1234"      // Replace with your RabbitMQ password
+              Password = "1234"      // Replace with your RabbitMQ password
         };
 
         using (var connection = factory.CreateConnection())
         using (var channel = connection.CreateModel())
         {
-            // Declare a queue. Sender new-bid-queue
+            // Declare a queue
             channel.QueueDeclare(queue: "new-bid-queue",
                                  durable: false,
                                  exclusive: false,
                                  autoDelete: false,
                                  arguments: null);
 
-            //Receiver bid-data-queue
-            channel.QueueDeclare(queue: "bid-data-queue",
-                                 durable: false,
-                                 exclusive: false,
-                                 autoDelete: false,
-                                 arguments: null);
+            // Convert newArtifact to a JSON string
+            var json = JsonSerializer.Serialize(result);
 
-            var consumer = new EventingBasicConsumer(channel);
-            consumer.Received += (model, ea) =>
-            {
-                var body = ea.Body.ToArray();
-                var message = Encoding.UTF8.GetString(body);
-                Console.WriteLine($" [x] Received {message}");
-
-                // Parse the received message as JSON
-                var jsonDocument = JsonDocument.Parse(message);
-            };
-
-            // Return the result object
-            return result;
+            // Publish the message to the queue
+            var body = Encoding.UTF8.GetBytes(json);
+            channel.BasicPublish(exchange: "", routingKey: "new-bid-queue", basicProperties: null, body: body);
         }
+
+        // Return the result object
+        return result;
     }
     //RabbitMQ slut
 
@@ -137,10 +122,9 @@ public class AuctionController : ControllerBase
 
 
 
-
-
+    
+    
     //GET
-    [Authorize]
     [HttpGet("getallauctions")]
     public async Task<IActionResult> GetAllAuctions()
     {
@@ -154,7 +138,9 @@ public class AuctionController : ControllerBase
         {
             return BadRequest("AuctionService - Auction list is empty");
         }
+
         
+
         var filteredAuctions = auctions.Select(c => new
         {
             c.ArtifactID,
@@ -167,7 +153,6 @@ public class AuctionController : ControllerBase
         return Ok(auctions);
     }
 
-    [Authorize]
     [HttpGet("getAuctionById/{auctionId}")]
     public async Task<Auction> GetAuctionById(int auctionId)
     {
@@ -181,7 +166,7 @@ public class AuctionController : ControllerBase
         int? finalBid;
         if (auction.AuctionEndDate < DateTime.Now)
         {
-            finalBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault()!.BidAmount;
+            finalBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
         }
         else
         {
@@ -220,7 +205,7 @@ public class AuctionController : ControllerBase
         {
             //string catalogueServiceUrl = "http://catalogue:80";
             //string catalogueServiceUrl = "http://localhost:4000";
-            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL")!;
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
@@ -235,9 +220,17 @@ public class AuctionController : ControllerBase
             ArtifactDTO artifact = await response.Content.ReadFromJsonAsync<ArtifactDTO>();
 
             // Extract the ArtifactID from the deserialized Artifact object
-            int artifactId = (int)artifact!.ArtifactID!;
-            
-            return Ok(artifact);
+            int artifactId = artifact.ArtifactID;
+
+
+            var filteredArtifact = new
+            {
+                artifact.ArtifactName,
+                artifact.ArtifactDescription,
+                artifact.ArtifactPicture
+            };
+
+            return Ok(filteredArtifact);
         }
     }
 
@@ -246,26 +239,18 @@ public class AuctionController : ControllerBase
     {
         _logger.LogInformation("AuctionService - GetUser function hit");
 
-        using (HttpClient _httpClient = new HttpClient())
+        using (HttpClient client = new HttpClient())
         {
-            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL")!;
+
+            //string userServiceUrl = "http://user:80";
+            //string userServiceUrl = "http://localhost:4000";
+            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL");
+
             string getUserEndpoint = "/user/getUser/" + id;
 
             _logger.LogInformation(userServiceUrl + getUserEndpoint);
 
-            // Retrieve the current user's token from the request
-            var tokenValue = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
-            _logger.LogInformation("CatalogueService - token first default: " + tokenValue);
-            var token = tokenValue?.Replace("Bearer ", "");
-            _logger.LogInformation("CatalogueService - token w/o bearer: " + token);
-
-            // Create a new HttpRequestMessage to include the token
-            var request = new HttpRequestMessage(HttpMethod.Get, userServiceUrl + getUserEndpoint);
-            //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            // Send the request to the AuctionService API to retrieve all auctions
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
+            HttpResponseMessage response = await client.GetAsync(userServiceUrl + getUserEndpoint);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve UserId from UserService");
@@ -299,27 +284,16 @@ public class AuctionController : ControllerBase
     {
         _logger.LogInformation("AuctionService - AddAuctionFromArtifactId function hit");
 
-        using (HttpClient _httpClient = new HttpClient())
+        using (HttpClient client = new HttpClient())
         {
-            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL")!;
+            //string catalogueServiceUrl = "http://catalogue:80";
+            //string catalogueServiceUrl = "http://localhost:4000";
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + artifactID;
 
             _logger.LogInformation($"AuctionService: {catalogueServiceUrl + getCatalogueEndpoint}");
 
-            // Retrieve the current user's token from the request
-            var tokenValue = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
-            _logger.LogInformation("CatalogueService - token first default: " + tokenValue);
-            var token = tokenValue?.Replace("Bearer ", "");
-            _logger.LogInformation("CatalogueService - token w/o bearer: " + token);
-
-            // Create a new HttpRequestMessage to include the token
-            var request = new HttpRequestMessage(HttpMethod.Get, catalogueServiceUrl + getCatalogueEndpoint);
-            //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
-
-            // Send the request to the UserService API to retrieve the user
-            HttpResponseMessage response = await _httpClient.SendAsync(request);
-
+            HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve ArtifactID from ArtifactService");
@@ -364,7 +338,7 @@ public class AuctionController : ControllerBase
 
                 _logger.LogInformation($"AuctionService - {catalogueServiceUrl + getActivationEndpoint}");
 
-                HttpResponseMessage activationResponse = await _httpClient.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
+                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
 
                 _logger.LogInformation($"AuctionService - new Artifact.Status: {artifact.Status}");
 
@@ -403,7 +377,7 @@ public class AuctionController : ControllerBase
                     BidId = latestId,
                     ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
-                    BidAmount = bid!.BidAmount
+                    BidAmount = bid.BidAmount
                 };
                 _logger.LogInformation("AuctionService - new Bid object made. BidId: " + newBid.BidId);
 
@@ -422,7 +396,7 @@ public class AuctionController : ControllerBase
                     BidAmount = newBid.BidAmount,
                     BidDate = newBid.BidDate
                 };
-                //START HER FRA::
+
                 var auction = await GetAuctionById(auctionId);
 
                 await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid); //Rabbit if-sætning her i guess
