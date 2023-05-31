@@ -28,8 +28,8 @@ namespace BidServiceWorker
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-
-        //    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); // 30 sekunder delay på connect til rabbitMQ - fikser måske fejl emd den ik gider hente bid-data-queue
+            _logger.LogInformation("ExecuteAsync method called.");
+            //    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); // 30 sekunder delay på connect til rabbitMQ - fikser måske fejl emd den ik gider hente bid-data-queue
 
             var factory = new ConnectionFactory()
             {
@@ -109,7 +109,7 @@ namespace BidServiceWorker
             }
             catch (Exception ex)
             {
-
+                _logger.LogError(ex, "An error occurred while receiving the message from bid-data-queue.");
                 _logger.LogError(ex.Message);
 
             }    // Background service loop
