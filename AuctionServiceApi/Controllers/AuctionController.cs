@@ -122,9 +122,10 @@ public class AuctionController : ControllerBase
 
 
 
-    
-    
+
+
     //GET
+    [Authorize]
     [HttpGet("getallauctions")]
     public async Task<IActionResult> GetAllAuctions()
     {
