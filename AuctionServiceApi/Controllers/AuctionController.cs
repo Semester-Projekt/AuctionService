@@ -28,6 +28,8 @@ using System.Diagnostics;
 using NLog;
 using RabbitMQ.Client.Events;
 using MongoDB.Driver.Core.Bindings;
+using System.Net.Http.Headers;
+using System.Net.Http;
 
 namespace Controllers;
 
@@ -213,16 +215,24 @@ public class AuctionController : ControllerBase
     {
         _logger.LogInformation("AuctionService - GetArtifactIdFromCatalogueService function hit");
 
-        using (HttpClient client = new HttpClient())
+        using (HttpClient _httpClient = new HttpClient())
         {
-            //string catalogueServiceUrl = "http://catalogue:80";
-            //string catalogueServiceUrl = "http://localhost:4000";
             string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
 
-            HttpResponseMessage response = await client.GetAsync(catalogueServiceUrl + getCatalogueEndpoint);
+            var tokenValue = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+            _logger.LogInformation("CatalogueService - token first default: " + tokenValue);
+            var token = tokenValue?.Replace("Bearer ", "");
+            _logger.LogInformation("CatalogueService - token w/o bearer: " + token);
+
+            // Create a new HttpRequestMessage to include the token
+            var request = new HttpRequestMessage(HttpMethod.Get, catalogueServiceUrl + getCatalogueEndpoint);
+            //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+            HttpResponseMessage response = await _httpClient.SendAsync(request);
             if (!response.IsSuccessStatusCode)
             {
                 return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve ArtifactID from CatalogueService");
