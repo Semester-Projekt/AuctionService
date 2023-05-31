@@ -87,59 +87,21 @@ public class AuctionController : ControllerBase
                                  exclusive: false,
                                  autoDelete: false,
                                  arguments: null);
-            try
+
+            var consumer = new EventingBasicConsumer(channel);
+            consumer.Received += (model, ea) =>
             {
-                var consumer = new EventingBasicConsumer(channel);
-                consumer.Received += (model, ea) =>
-                {
-                    var body = ea.Body.ToArray();
-                    var message = Encoding.UTF8.GetString(body);
-                    Console.WriteLine($" [x] Received {message}");
-                    // Parse the received message as JSON
-                    var jsonDocument = JsonDocument.Parse(message);
+                var body = ea.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+                Console.WriteLine($" [x] Received {message}");
 
-                    // Extract the "BidAmount" value
-                    if (jsonDocument.RootElement.TryGetProperty("BidAmount", out var bidAmountProperty) && bidAmountProperty.ValueKind == JsonValueKind.Number)
-                    {
-                        var bidAmount = bidAmountProperty.GetInt32(); // Assumes the "BidAmount" is an integer
-                        Console.WriteLine($" [x] Received BidAmount: {bidAmount}");
+                // Parse the received message as JSON
+                var jsonDocument = JsonDocument.Parse(message);
+            };
 
-                        // Extract the "AuctionId" value
-                        if (jsonDocument.RootElement.TryGetProperty("AuctionId", out var auctionIdProperty) && auctionIdProperty.ValueKind == JsonValueKind.Number)
-                        {
-                            var auctionId = auctionIdProperty.GetInt32(); // Assumes the "AuctionId" is an integer
-                            Console.WriteLine($" [x] Received AuctionId: {auctionId}");
-                        }
-                        else
-                        {
-                            Console.WriteLine("Invalid or missing AuctionId property in the received message.");
-                        }
-
-                    }
-                    else
-                    {
-                        Console.WriteLine("Invalid or missing BidAmount property in the received message.");
-                    }
-                };
-
-                    channel.BasicConsume(queue: "bid-data-queue", autoAck: true, consumer: consumer);  
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex.Message);
-            }
-
-
-            // Convert newArtifact to a JSON string
-            var json = JsonSerializer.Serialize(result);
-
-            // Publish the message to the queue
-            var body = Encoding.UTF8.GetBytes(json);
-            channel.BasicPublish(exchange: "", routingKey: "new-bid-queue", basicProperties: null, body: body);
+            // Return the result object
+            return result;
         }
-
-        // Return the result object
-        return result;
     }
     //RabbitMQ slut
 
@@ -202,7 +164,7 @@ public class AuctionController : ControllerBase
             c.BidHistory
         });
 
-        return Ok(auctions);
+        return Ok(filteredAuctions);
     }
 
     [Authorize]
