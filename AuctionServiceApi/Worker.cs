@@ -29,7 +29,7 @@ namespace BidServiceWorker
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
 
-            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken); // 10 sekunder delay på connect til rabbitMQ - fikser coreDump-fejl
+            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); // 30 sekunder delay på connect til rabbitMQ - fikser måske fejl emd den ik gider hente bid-data-queue
 
             var factory = new ConnectionFactory()
             {
