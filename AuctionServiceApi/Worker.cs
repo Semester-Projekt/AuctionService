@@ -70,7 +70,7 @@ namespace BidServiceWorker
 
                     // Parse the received message as JSON
                     var jsonDocument = JsonDocument.Parse(message);
-                    /*
+                    
                                         // Extract the "BidAmount" value
                                         if (jsonDocument.RootElement.TryGetProperty("BidAmount", out var bidAmountProperty) && bidAmountProperty.ValueKind == JsonValueKind.Number)
                                         {
@@ -96,8 +96,8 @@ namespace BidServiceWorker
                                             Console.WriteLine("Invalid or missing BidAmount property in the received message.");
                                         }
                                     };
-                    */
-                };
+                    
+                
                     _channel.BasicConsume(queue: "bid-data-queue", autoAck: true, consumer: consumer);
                 
             }
