@@ -171,7 +171,7 @@ public class AuctionController : ControllerBase
             c.BidHistory
         });
 
-        return Ok(filteredAuctions);
+        return Ok(auctions);
     }
 
     [HttpGet("getAuctionById/{auctionId}")]
