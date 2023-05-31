@@ -26,6 +26,8 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Diagnostics;
 using NLog;
+using RabbitMQ.Client.Events;
+using MongoDB.Driver.Core.Bindings;
 
 namespace Controllers;
 
@@ -36,6 +38,7 @@ public class AuctionController : ControllerBase
     private readonly ILogger<AuctionController> _logger;
     private readonly IConfiguration _config;
     private AuctionRepository _auctionRepository;
+
 
     //docker test
 
@@ -55,6 +58,7 @@ public class AuctionController : ControllerBase
 
     }
 
+
     //RabbitMQ start
     //  private object PublishNewArtifactMessage(Artifact newArtifact, object result)
     private object PublishNewBidMessage(object result)
@@ -64,18 +68,19 @@ public class AuctionController : ControllerBase
         {
             HostName = _config["rabbithostname"], // Replace with your RabbitMQ server hostname
             UserName = "worker",     // Replace with your RabbitMQ username
-            Password = "1234"      // Replace with your RabbitMQ password
+              Password = "1234"      // Replace with your RabbitMQ password
         };
 
         using (var connection = factory.CreateConnection())
         using (var channel = connection.CreateModel())
         {
-            // Declare a queue
+            // Declare a queue. Sender queue
             channel.QueueDeclare(queue: "new-bid-queue",
                                  durable: false,
                                  exclusive: false,
                                  autoDelete: false,
                                  arguments: null);
+
 
             // Convert newArtifact to a JSON string
             var json = JsonSerializer.Serialize(result);
@@ -90,7 +95,14 @@ public class AuctionController : ControllerBase
     }
     //RabbitMQ slut
 
+    //RabbitMQ receiver start
 
+
+
+
+
+
+    //RabbitMQ receiver slut
     
     // VERSION_ENDEPUNKT
     [HttpGet("version")]
@@ -122,10 +134,9 @@ public class AuctionController : ControllerBase
 
 
 
-
-
+    
+    
     //GET
-    [Authorize]
     [HttpGet("getallauctions")]
     public async Task<IActionResult> GetAllAuctions()
     {
@@ -139,7 +150,9 @@ public class AuctionController : ControllerBase
         {
             return BadRequest("AuctionService - Auction list is empty");
         }
+
         
+
         var filteredAuctions = auctions.Select(c => new
         {
             c.ArtifactID,
@@ -149,7 +162,7 @@ public class AuctionController : ControllerBase
             c.BidHistory
         });
 
-        return Ok(filteredAuctions);
+        return Ok(auctions);
     }
 
     [HttpGet("getAuctionById/{auctionId}")]
@@ -165,7 +178,7 @@ public class AuctionController : ControllerBase
         int? finalBid;
         if (auction.AuctionEndDate < DateTime.Now)
         {
-            finalBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault()!.BidAmount;
+            finalBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
         }
         else
         {
@@ -204,7 +217,7 @@ public class AuctionController : ControllerBase
         {
             //string catalogueServiceUrl = "http://catalogue:80";
             //string catalogueServiceUrl = "http://localhost:4000";
-            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL")!;
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
@@ -243,7 +256,7 @@ public class AuctionController : ControllerBase
 
             //string userServiceUrl = "http://user:80";
             //string userServiceUrl = "http://localhost:4000";
-            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL")!;
+            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL");
 
             string getUserEndpoint = "/user/getUser/" + id;
 
@@ -376,7 +389,7 @@ public class AuctionController : ControllerBase
                     BidId = latestId,
                     ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
-                    BidAmount = bid!.BidAmount
+                    BidAmount = bid.BidAmount
                 };
                 _logger.LogInformation("AuctionService - new Bid object made. BidId: " + newBid.BidId);
 
