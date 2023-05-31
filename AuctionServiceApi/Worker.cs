@@ -124,14 +124,8 @@ namespace BidServiceWorker
             var bidDataJson = JsonSerializer.Serialize(bidData);
             var body = Encoding.UTF8.GetBytes(bidDataJson);
 
-            // Publish the message to the desired queue
-           /* _channel.BasicPublish(
-                exchange: "",
-                routingKey: "bid-data-queue", // Specify the queue to which you want to send the message
-                basicProperties: null,
-                body: body);*/
 
-            Console.WriteLine($" [x] Published BidAmount: {bidAmount} and AuctionId: {auctionId} to bid-data-queue");
+
         }
 
         public override void Dispose()

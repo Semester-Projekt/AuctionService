@@ -384,13 +384,17 @@ public class AuctionController : ControllerBase
             if (user != null)
             {
 
+                // Retrieve the bidAmount value from RabbitMQ
+                var bidAmount = bid?.BidAmount ?? 0; // Assume a default value if bid or bidAmount is null
+
                 var newBid = new Bid
                 {
                     BidId = latestId,
                     ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
-                    BidAmount = bid.BidAmount
+                    BidAmount = bidAmount //Set bidAmount to value from RabbitMQ
                 };
+
                 _logger.LogInformation("AuctionService - new Bid object made. BidId: " + newBid.BidId);
 
                 _auctionRepository.AddNewBid(newBid);
@@ -398,7 +402,7 @@ public class AuctionController : ControllerBase
 
                 var result = new
                 {
-                    AuctionId /*ArtifactId*/ = auctionId, //newBid.ArtifactId, //Ændret til AuctionId for at RabbitMQ modtager auctionid frem for artifactid
+                    AuctionId  = auctionId, //Ændret til AuctionId for at RabbitMQ modtager auctionid frem for artifactid
                     BidOwner = new
                     {
                         user.UserName,
@@ -413,7 +417,7 @@ public class AuctionController : ControllerBase
 
                 await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid); //Rabbit if-sætning her i guess
 
-                var aucton = await GetAuctionById(auctionId);
+              //  int? aucton = await GetAuctionById(auctionId); Fjernet for rabbit testing
 
                 int? currentBid = auction.CurrentBid;
 

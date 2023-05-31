@@ -38,7 +38,7 @@ try // try/catch/finally fra m10.01 opgave b step 4
 
     // Add services to the container.
     builder.Services.AddSingleton<AuctionRepository>();
-    builder.Services.AddHostedService<Worker>();
+    builder.Services.AddHostedService<Worker>(); //Fikser RabbitMQ fejl :)
 
     builder.Services.AddControllers();
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
