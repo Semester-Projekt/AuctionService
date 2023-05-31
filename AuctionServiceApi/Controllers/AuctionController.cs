@@ -27,6 +27,7 @@ using System.IO;
 using System.Diagnostics;
 using NLog;
 using RabbitMQ.Client.Events;
+using MongoDB.Driver.Core.Bindings;
 
 namespace Controllers;
 
@@ -73,12 +74,55 @@ public class AuctionController : ControllerBase
         using (var connection = factory.CreateConnection())
         using (var channel = connection.CreateModel())
         {
-            // Declare a queue
+            // Declare a queue. Sender queue
             channel.QueueDeclare(queue: "new-bid-queue",
                                  durable: false,
                                  exclusive: false,
                                  autoDelete: false,
                                  arguments: null);
+            //TESTING!!!
+            //Receiver queue
+            channel.QueueDeclare(queue: "bid-data-queue",
+                   durable: false,
+                   exclusive: false,
+                   autoDelete: false,
+                   arguments: null);
+
+            try
+            {
+                var consumer = new EventingBasicConsumer(channel);
+                consumer.Received += (model, ea) =>
+                {
+                    var body = ea.Body.ToArray();
+                    var message = Encoding.UTF8.GetString(body);
+                    Console.WriteLine($" [x] Received {message}");
+
+                    // Parse the received message as JSON
+                    var jsonDocument = JsonDocument.Parse(message);
+
+                    // Extract the "BidAmount" value
+                    if (jsonDocument.RootElement.TryGetProperty("BidAmount", out var bidAmountProperty) && bidAmountProperty.ValueKind == JsonValueKind.Number)
+                    {
+                        var bidAmount = bidAmountProperty.GetInt32(); // Assumes the "BidAmount" is an integer
+                        Console.WriteLine($" [x] Received BidAmount: {bidAmount}");
+
+                    }
+                    else
+                    {
+                        Console.WriteLine("Invalid or missing BidAmount property in the received message.");
+                    }
+                };
+            } catch (Exception ex)
+            {
+
+                _logger.LogError(ex.Message);
+
+            }
+
+       
+
+
+            //TESTING!!!
 
             // Convert newArtifact to a JSON string
             var json = JsonSerializer.Serialize(result);
