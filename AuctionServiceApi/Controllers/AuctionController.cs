@@ -26,6 +26,8 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Diagnostics;
 using NLog;
+using MongoDB.Driver.Core.Bindings;
+using RabbitMQ.Client.Events;
 
 namespace Controllers;
 
@@ -70,12 +72,32 @@ public class AuctionController : ControllerBase
         using (var connection = factory.CreateConnection())
         using (var channel = connection.CreateModel())
         {
-            // Declare a queue
+            // Declare a queue. Sender new-bid-queue
             channel.QueueDeclare(queue: "new-bid-queue",
                                  durable: false,
                                  exclusive: false,
                                  autoDelete: false,
                                  arguments: null);
+
+            //Receiver bid-data-queue
+            channel.QueueDeclare(queue: "bid-data-queue",
+                                 durable: false,
+                                 exclusive: false,
+                                 autoDelete: false,
+                                 arguments: null);
+
+            var consumer = new EventingBasicConsumer(channel);
+            consumer.Received += (model, ea) =>
+            {
+                var body = ea.Body.ToArray();
+                var message = Encoding.UTF8.GetString(body);
+                Console.WriteLine($" [x] Received {message}");
+            };
+            channel.BasicConsume(queue: "bid-data-queue",
+                                 autoAck: true,
+                                 consumer: consumer);
+
+
 
             // Convert newArtifact to a JSON string
             var json = JsonSerializer.Serialize(result);
@@ -395,7 +417,7 @@ public class AuctionController : ControllerBase
                     BidAmount = newBid.BidAmount,
                     BidDate = newBid.BidDate
                 };
-
+                //START HER FRA::
                 var auction = await GetAuctionById(auctionId);
 
                 await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid); //Rabbit if-sætning her i guess
