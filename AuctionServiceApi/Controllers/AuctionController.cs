@@ -37,18 +37,15 @@ public class AuctionController : ControllerBase
     private readonly ILogger<AuctionController> _logger;
     private readonly IConfiguration _config;
     private AuctionRepository _auctionRepository;
-    private IConnection _connection;
-    private IModel _channel;
+
 
     //docker test
 
-    public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository, IConnection connection, IModel channel)
+    public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository)
     {   
         _config = config;
         _logger = logger;
         _auctionRepository = userRepository;
-        _connection = connection;
-        _channel = channel;
         _logger.LogInformation($"Connecting to rabbitMQ on {_config["rabbithostname"]}"); //tester om den kommer på rigtig rabbitserver. Skrives i logs.
 
 
