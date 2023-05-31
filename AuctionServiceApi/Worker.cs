@@ -28,8 +28,8 @@ namespace BidServiceWorker
 
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            _logger.LogInformation("ExecuteAsync method called.");
-            //    await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken); // 30 sekunder delay på connect til rabbitMQ - fikser måske fejl emd den ik gider hente bid-data-queue
+
+            await Task.Delay(TimeSpan.FromSeconds(10), stoppingToken); // 10 sekunder delay på connect til rabbitMQ - fikser coreDump-fejl
 
             var factory = new ConnectionFactory()
             {
@@ -59,19 +59,11 @@ namespace BidServiceWorker
                             autoDelete: false,
                             arguments: null);
 
-            _channel.QueueDeclare(queue: "test-test-queue",
-                         durable: false,
-                         exclusive: false,
-                         autoDelete: false,
-                         arguments: null);
-
             try
             {
                 var consumer = new EventingBasicConsumer(_channel);
-                consumer.Received += async (model, ea) =>
+                consumer.Received += (model, ea) =>
                 {
-                    await Task.Delay(TimeSpan.FromSeconds(40)); // Add a delay of 40 seconds before consuming the message
-
                     var body = ea.Body.ToArray();
                     var message = Encoding.UTF8.GetString(body);
                     Console.WriteLine($" [x] Received {message}");
@@ -105,11 +97,11 @@ namespace BidServiceWorker
                     }
                 };
 
-                _channel.BasicConsume(queue: "bid-data-queue", autoAck: true, consumer: consumer);
+                _channel.BasicConsume(queue: "new-bid-queue", autoAck: true, consumer: consumer);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "An error occurred while receiving the message from bid-data-queue.");
+
                 _logger.LogError(ex.Message);
 
             }    // Background service loop
@@ -135,7 +127,7 @@ namespace BidServiceWorker
             // Publish the message to the desired queue
             _channel.BasicPublish(
                 exchange: "",
-                routingKey: "test-test-queue", // Specify the queue to which you want to send the message
+                routingKey: "bid-data-queue", // Specify the queue to which you want to send the message
                 basicProperties: null,
                 body: body);
 
