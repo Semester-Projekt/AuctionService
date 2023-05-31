@@ -97,7 +97,7 @@ namespace BidServiceWorker
                     }
                 };
 
-                _channel.BasicConsume(queue: "new-bid-queue", autoAck: true, consumer: consumer);
+                _channel.BasicConsume(queue: "bid-data-queue", autoAck: true, consumer: consumer);
             }
             catch (Exception ex)
             {
@@ -125,11 +125,11 @@ namespace BidServiceWorker
             var body = Encoding.UTF8.GetBytes(bidDataJson);
 
             // Publish the message to the desired queue
-            _channel.BasicPublish(
+           /* _channel.BasicPublish(
                 exchange: "",
                 routingKey: "bid-data-queue", // Specify the queue to which you want to send the message
                 basicProperties: null,
-                body: body);
+                body: body);*/
 
             Console.WriteLine($" [x] Published BidAmount: {bidAmount} and AuctionId: {auctionId} to bid-data-queue");
         }
