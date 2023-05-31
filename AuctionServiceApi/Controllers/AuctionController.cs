@@ -402,7 +402,7 @@ public class AuctionController : ControllerBase
 
                 _logger.LogInformation($"AuctionService - {catalogueServiceUrl + getActivationEndpoint}");
 
-                HttpResponseMessage activationResponse = await client.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
+                HttpResponseMessage activationResponse = await _httpClient.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
 
                 _logger.LogInformation($"AuctionService - new Artifact.Status: {artifact.Status}");
 
