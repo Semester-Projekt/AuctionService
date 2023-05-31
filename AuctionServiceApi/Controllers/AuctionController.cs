@@ -384,21 +384,22 @@ public class AuctionController : ControllerBase
         var userResponse = await GetUserFromUserService(userId);
 
 
+
         if (userResponse.Result is ObjectResult objectResult && objectResult.Value is UserDTO user)
         {
-            var latestId = await _auctionRepository.GetNextBidId();
+            var allBids = await _auctionRepository.GetAllBids();
+            int? latestId = allBids.DefaultIfEmpty().Max(a => a == null ? 0 : a.BidId) + 1;
 
             _logger.LogInformation("AuctionService - BidId: " + latestId);
 
             if (user != null)
             {
-
                 // Retrieve the bidAmount value from RabbitMQ
                 var bidAmount = bid?.BidAmount ?? 0; // Assume a default value if bid or bidAmount is null
 
                 var newBid = new Bid
                 {
-                    BidId = latestId,
+                    BidId = (int)latestId,
                     ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
                     BidAmount = bidAmount //Set bidAmount to value from RabbitMQ
@@ -439,12 +440,8 @@ public class AuctionController : ControllerBase
                 {
                     await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
 
-
-
-
                     // Publish the new artifact message to RabbitMQ
                     PublishNewBidMessage(result);
-
 
                     return Ok(result);
                 }
