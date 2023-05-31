@@ -342,12 +342,10 @@ public class AuctionController : ControllerBase
                 ArtifactID = artifactID
             };
 
-            // Add the new auction to the repository or perform necessary operations
 
+            // Add the new auction to the repository or perform necessary operations
             if (artifact.Status != "Active")
             {
-                _auctionRepository.AddNewAuction(newAuction);
-
                 _logger.LogInformation("AuctionService - New Auction object added");
 
                 _logger.LogInformation($"result: ArtifactID: {newAuction.ArtifactID} + AuctionEndDate: {newAuction.AuctionEndDate}");
@@ -360,8 +358,11 @@ public class AuctionController : ControllerBase
                 
                 HttpResponseMessage activationResponse = await _httpClient.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
 
-                _logger.LogInformation($"AuctionService - new Artifact.Status: {artifact.Status}");
+                var updatedArtifact = response.Content.ReadFromJsonAsync<ArtifactDTO>().Result!;
 
+                _logger.LogInformation($"AuctionService - new Artifact.Status: {updatedArtifact.Status}");
+
+                _auctionRepository.AddNewAuction(newAuction);
 
                 return Ok(newAuction);
             }
@@ -506,7 +507,7 @@ public class AuctionController : ControllerBase
         {
             return BadRequest("AuctionService - No auction with id: " + auctionId);
         }
-        else if (deletedAuction.CurrentBid != null && deletedAuction.FinalBid == null)
+        else if (deletedAuction.CurrentBid > 0 && deletedAuction.FinalBid == null)
         {
             return BadRequest("AuctionService - Cannot delete auction with active bids");
         }
