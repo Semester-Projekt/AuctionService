@@ -26,6 +26,7 @@ using Microsoft.Extensions.Logging;
 using System.IO;
 using System.Diagnostics;
 using NLog;
+using RabbitMQ.Client.Events;
 
 namespace Controllers;
 
@@ -36,14 +37,18 @@ public class AuctionController : ControllerBase
     private readonly ILogger<AuctionController> _logger;
     private readonly IConfiguration _config;
     private AuctionRepository _auctionRepository;
+    private IConnection _connection;
+    private IModel _channel;
 
     //docker test
 
-    public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository)
+    public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository, IConnection connection, IModel channel)
     {   
         _config = config;
         _logger = logger;
         _auctionRepository = userRepository;
+        _connection = connection;
+        _channel = channel;
         _logger.LogInformation($"Connecting to rabbitMQ on {_config["rabbithostname"]}"); //tester om den kommer på rigtig rabbitserver. Skrives i logs.
 
 
@@ -53,7 +58,30 @@ public class AuctionController : ControllerBase
         var _ipaddr = ips.First().MapToIPv4().ToString();
         _logger.LogInformation(1, $"Auth service responding from {_ipaddr}");
 
+//Receiver start
+        //
+        StartReceivingBidData();
+        //
     }
+
+    private void StartReceivingBidData()
+    {
+        var consumer = new EventingBasicConsumer(_channel);
+        consumer.Received += (model, ea) =>
+        {
+            var body = ea.Body.ToArray();
+            var message = Encoding.UTF8.GetString(body);
+            Console.WriteLine($" [x] Received {message}");
+
+            // Process the received message here
+            // ...
+
+            _channel.BasicAck(ea.DeliveryTag, false);
+        };
+
+        _channel.BasicConsume(queue: "bid-data-queue", autoAck: false, consumer: consumer);
+    }
+    //Receiver slut
 
     //RabbitMQ start
     //  private object PublishNewArtifactMessage(Artifact newArtifact, object result)
@@ -90,7 +118,14 @@ public class AuctionController : ControllerBase
     }
     //RabbitMQ slut
 
+    //RabbitMQ receiver start
 
+
+
+
+
+
+    //RabbitMQ receiver slut
     
     // VERSION_ENDEPUNKT
     [HttpGet("version")]
