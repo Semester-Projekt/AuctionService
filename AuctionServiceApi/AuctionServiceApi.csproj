@@ -23,6 +23,9 @@
   
   
   <ItemGroup>
+    <None Remove="Schemas\" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="7.0.5" />
     <PackageReference Include="RabbitMQ.client" Version="6.5.0" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="6.5.0" />
@@ -33,10 +36,10 @@
     <PackageReference Include="MongoDB.Bson" Version="2.19.2" />
     <PackageReference Include="MongoDB.Driver.Core" Version="2.19.2" />
     <PackageReference Include="MongoDB.Driver" Version="2.19.2" />
-    <PackageReference Include="NLog" Version="5.1.5" />
-    <PackageReference Include="NLog.Extensions.Logging" Version="5.2.5" />
+    <PackageReference Include="NLog" Version="5.2.0" />
+    <PackageReference Include="NLog.Extensions.Logging" Version="5.3.0" />
     <PackageReference Include="NLog.Targets.Loki" Version="1.4.6" />
-    <PackageReference Include="NLog.Web.AspNetCore" Version="5.2.3" />
+    <PackageReference Include="NLog.Web.AspNetCore" Version="5.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="7.0.5" />
     <PackageReference Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="7.0.5" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="7.0.5">
@@ -56,4 +59,7 @@
   </ItemGroup>
 
 
+  <ItemGroup>
+    <Folder Include="Schemas\" />
+  </ItemGroup>
 </Project>

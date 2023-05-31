@@ -138,9 +138,7 @@ public class AuctionController : ControllerBase
         {
             return BadRequest("AuctionService - Auction list is empty");
         }
-
         
-
         var filteredAuctions = auctions.Select(c => new
         {
             c.ArtifactID,
@@ -166,7 +164,7 @@ public class AuctionController : ControllerBase
         int? finalBid;
         if (auction.AuctionEndDate < DateTime.Now)
         {
-            finalBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault().BidAmount;
+            finalBid = _auctionRepository.GetAllBids().Result.Where(b => b.ArtifactId == auction.ArtifactID).OrderByDescending(b => b.BidAmount).FirstOrDefault()!.BidAmount;
         }
         else
         {
@@ -205,7 +203,7 @@ public class AuctionController : ControllerBase
         {
             //string catalogueServiceUrl = "http://catalogue:80";
             //string catalogueServiceUrl = "http://localhost:4000";
-            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
+            string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL")!;
             string getCatalogueEndpoint = "/catalogue/getArtifactById/" + id;
 
             _logger.LogInformation(catalogueServiceUrl + getCatalogueEndpoint);
@@ -220,7 +218,7 @@ public class AuctionController : ControllerBase
             ArtifactDTO artifact = await response.Content.ReadFromJsonAsync<ArtifactDTO>();
 
             // Extract the ArtifactID from the deserialized Artifact object
-            int artifactId = artifact.ArtifactID;
+            int artifactId = (int)artifact!.ArtifactID!;
 
 
             var filteredArtifact = new
@@ -244,7 +242,7 @@ public class AuctionController : ControllerBase
 
             //string userServiceUrl = "http://user:80";
             //string userServiceUrl = "http://localhost:4000";
-            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL");
+            string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL")!;
 
             string getUserEndpoint = "/user/getUser/" + id;
 
@@ -377,7 +375,7 @@ public class AuctionController : ControllerBase
                     BidId = latestId,
                     ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
-                    BidAmount = bid.BidAmount
+                    BidAmount = bid!.BidAmount
                 };
                 _logger.LogInformation("AuctionService - new Bid object made. BidId: " + newBid.BidId);
 

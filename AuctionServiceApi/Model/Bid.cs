@@ -19,10 +19,7 @@ namespace Model
 
         [BsonElement("ArtifactId")]
         public int ArtifactId { get; set; }
-
-        //[BsonElement("BidOwner")]
-        //public int UserId { get; set; }
-
+        
         [BsonElement("BidOwner")]
         public UserDTO? BidOwner { get; set; } = new UserDTO();
 
@@ -35,8 +32,8 @@ namespace Model
 
         public Bid()
         {
-        }
 
+        }
 
         public Bid(int bidId, int artifactId, UserDTO bidOwner, int bidAmount)
         {
@@ -47,4 +44,3 @@ namespace Model
         }
     }
 }
-
