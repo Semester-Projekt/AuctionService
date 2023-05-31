@@ -46,13 +46,13 @@ namespace BidServiceWorker
             _connection = connection;
             _channel = connection.CreateModel();
 
-
+/*
             _channel.QueueDeclare(queue: "new-bid-queue",
                             durable: false,
                             exclusive: false,
                             autoDelete: false,
                             arguments: null);
-
+*/
             _channel.QueueDeclare(queue: "bid-data-queue",
                             durable: false,
                             exclusive: false,
