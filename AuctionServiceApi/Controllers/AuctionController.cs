@@ -325,7 +325,7 @@ public class AuctionController : ControllerBase
                 var newBid = new Bid
                 {
                     BidId = latestId,
-                    ArtifactId = auctionId, //bid!.ArtifactId,
+                    //ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
                     BidAmount = bidAmount //Set bidAmount to value from RabbitMQ
                 };
