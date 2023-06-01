@@ -44,11 +44,11 @@ public class AuctionController : ControllerBase
 
     //docker test
 
-    public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository userRepository)
+    public AuctionController(ILogger<AuctionController> logger, IConfiguration config, AuctionRepository auctionRepository)
     {
         _config = config;
         _logger = logger;
-        _auctionRepository = userRepository;
+        _auctionRepository = auctionRepository;
         _logger.LogInformation($"Connecting to rabbitMQ on {_config["rabbithostname"]}"); //tester om den kommer på rigtig rabbitserver. Skrives i logs.
 
 
@@ -255,15 +255,15 @@ public class AuctionController : ControllerBase
         }
     }
 
-    [HttpGet("getUserFromUserService/{id}"), DisableRequestSizeLimit]
-    public async Task<ActionResult<UserDTO>> GetUserFromUserService(int id)
+    [HttpGet("getUserFromUserService/{userName}"), DisableRequestSizeLimit]
+    public async Task<ActionResult<UserDTO>> GetUserFromUserService(string userName)
     {
         _logger.LogInformation("AuctionService - GetUser function hit");
 
         using (HttpClient client = new HttpClient())
         {
             string userServiceUrl = Environment.GetEnvironmentVariable("USER_SERVICE_URL")!;
-            string getUserEndpoint = "/user/getUser/" + id;
+            string getUserEndpoint = "/user/getUser/" + userName;
 
             _logger.LogInformation(userServiceUrl + getUserEndpoint);
 
@@ -372,12 +372,12 @@ public class AuctionController : ControllerBase
     }
 
     //RabbitMQ på AddNewBid!!!
-    [HttpPost("addBid/{userId}/{auctionid}")] // DENNE METODE SKAL KØRE IGENNEM RABBIT, HOW???
-    public async Task<IActionResult> AddNewBid([FromBody] Bid? bid, int userId, int auctionId)
+    [HttpPost("addBid/{userName}/{auctionid}")] // DENNE METODE SKAL KØRE IGENNEM RABBIT, HOW???
+    public async Task<IActionResult> AddNewBid([FromBody] Bid? bid, string userName, int auctionId)
     {
         _logger.LogInformation("AuctionService - AddNewBid function hit");
 
-        var userResponse = await GetUserFromUserService(userId);
+        var userResponse = await GetUserFromUserService(userName);
 
 
         if (userResponse.Result is ObjectResult objectResult && objectResult.Value is UserDTO user)
