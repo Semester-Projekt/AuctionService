@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using NLog;
 using NLog.Web;
+using BidServiceWorker;
 
 //Indlæs NLog.config-konfigurationsfil
 var logger =
@@ -37,12 +38,14 @@ try // try/catch/finally fra m10.01 opgave b step 4
 
     // Add services to the container.
     builder.Services.AddSingleton<AuctionRepository>();
+    builder.Services.AddHostedService<Worker>(); //Fikser RabbitMQ fejl :)
 
     builder.Services.AddControllers();
     // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
     builder.Services.AddEndpointsApiExplorer();
     builder.Services.AddSwaggerGen();
 
+  //  builder.Logging.ClearProviders();
     //Brug NLog som logger fremadrettet
     builder.Host.UseNLog();
 

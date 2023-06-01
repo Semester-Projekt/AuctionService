@@ -40,12 +40,10 @@ namespace Model
 			this.AuctionId = auctionId;
 			this.ArtifactID = artifactID;
 		}
-
-
+		
 		public Auction()
 		{
 			
 		}
 	}
 }
-
