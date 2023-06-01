@@ -355,7 +355,7 @@ public class AuctionController : ControllerBase
                 string getActivationEndpoint = "/catalogue/activateArtifact/" + artifactID; // Call activateArtifact endpoint to change Artifact status to 'Active'
 
                 _logger.LogInformation($"AuctionService - {catalogueServiceUrl + getActivationEndpoint}");
-                
+
                 HttpResponseMessage activationResponse = await _httpClient.PutAsync(catalogueServiceUrl + getActivationEndpoint, null); // Send put request to specified endpoint
 
                 _auctionRepository.AddNewAuction(newAuction);
@@ -436,7 +436,7 @@ public class AuctionController : ControllerBase
                     await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
 
                     _logger.LogInformation("AuctionService - BidAmount updated and bid added");
-                    
+
                     // Publish the new artifact message to RabbitMQ
                     PublishNewBidMessage(result);
 
@@ -498,6 +498,8 @@ public class AuctionController : ControllerBase
 
         var deletedAuction = await _auctionRepository.GetAuctionById(auctionId);
 
+        // var auctionArtifact = await GetArtifactIdFromCatalogueService(deletedAuction.ArtifactID);
+
         if (deletedAuction == null)
         {
             return BadRequest("AuctionService - No auction with id: " + auctionId);
@@ -506,10 +508,45 @@ public class AuctionController : ControllerBase
         {
             return BadRequest("AuctionService - Cannot delete auction with active bids");
         }
-        else await _auctionRepository.DeleteAuction(auctionId);
-        _logger.LogInformation($"AuctionService - Auction with id: {auctionId} deleted");
+        else
+        {
+            using (HttpClient _httpClient = new HttpClient())
+            {
+                string catalogueServiceUrl = Environment.GetEnvironmentVariable("CATALOGUE_SERVICE_URL");
+                string getDeletionEndpoint = "/catalogue/deleteartifact/" + deletedAuction.ArtifactID;
 
-        return Ok($"AuctionService - Auction has been deleted");
+                _logger.LogInformation($"AuctionService: {catalogueServiceUrl + getDeletionEndpoint}");
+
+
+
+                var tokenValue = HttpContext.Request.Headers["Authorization"].FirstOrDefault();
+                _logger.LogInformation("AuctionService - token first default: " + tokenValue);
+                var token = tokenValue?.Replace("Bearer ", "");
+                _logger.LogInformation("AuctionService - token w/o bearer: " + token);
+
+                // Create a new HttpRequestMessage to include the token
+                var request = new HttpRequestMessage(HttpMethod.Put, catalogueServiceUrl + getDeletionEndpoint);
+                //request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+                HttpResponseMessage response = await _httpClient.SendAsync(request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return StatusCode((int)response.StatusCode, "AuctionService - Failed to retrieve Delete Artifact from ArtifactService");
+                }
+
+
+
+                await _auctionRepository.DeleteAuction(auctionId);
+                _logger.LogInformation($"AuctionService - Auction with id: {auctionId} deleted");
+
+                return Ok($"AuctionService - Auction has been deleted");
+            }
+
+        }
+
+
+
     }
 
 
