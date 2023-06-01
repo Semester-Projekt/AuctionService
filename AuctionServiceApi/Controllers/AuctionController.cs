@@ -307,35 +307,33 @@ public class AuctionController : ControllerBase
     {
         _logger.LogInformation("AuctionService - AddNewBid function hit");
 
+        // Retreives the designated User from the specified UserName
         var userResponse = await GetUserFromUserService(userName);
 
-
+        // Validates the reponse from the UserService and parses it to a UserDTO object
         if (userResponse.Result is ObjectResult objectResult && objectResult.Value is UserDTO user)
         {
-            var latestId = await _auctionRepository.GetNextBidId();
+            var latestId = await _auctionRepository.GetNextBidId(); // Retreives the next BidId using the repository method
 
             _logger.LogInformation("AuctionService - BidId: " + latestId);
 
             if (user != null)
             {
-
                 // Retrieve the bidAmount value from RabbitMQ
                 var bidAmount = bid?.BidAmount ?? 0; // Assume a default value if bid or bidAmount is null
 
                 var newBid = new Bid
                 {
                     BidId = latestId,
-                    //ArtifactId = auctionId, //bid!.ArtifactId,
                     BidOwner = user,
                     BidAmount = bidAmount //Set bidAmount to value from RabbitMQ
                 };
 
                 _logger.LogInformation("AuctionService - new Bid object made. BidId: " + newBid.BidId);
 
-                _auctionRepository.AddNewBid(newBid);
+                _auctionRepository.AddNewBid(newBid); // Adds the new Bid to bid collection in the database
 
-
-                var result = new
+                var result = new // Creates a new result which will be sent to RabbitMQ
                 {
                     AuctionId = auctionId, //Ændret til AuctionId for at RabbitMQ modtager auctionid frem for artifactid
                     BidOwner = new
@@ -348,18 +346,15 @@ public class AuctionController : ControllerBase
                     BidDate = newBid.BidDate
                 };
 
+                // Retreives the current Auction
                 var auction = await GetAuctionById(auctionId);
-
-                await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid); //Rabbit if-sætning her i guess
-
+                
                 int? currentBid = auction.CurrentBid;
 
                 _logger.LogInformation("AuctionService - addNewBid - artifactID: " + auction.ArtifactID);
-
                 _logger.LogInformation("AuctionService - addNewBid - bidAmount på newBid: " + newBid.BidAmount);
-                _logger.LogInformation("AuctionService - addNewBid - bidAmount på bid: " + bid!.BidAmount);
 
-                if (newBid.BidAmount > currentBid)
+                if (newBid.BidAmount > currentBid) // Validates that the newBid is higher than the currentBid
                 {
                     await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
 
@@ -471,13 +466,6 @@ public class AuctionController : ControllerBase
 
                 return Ok($"AuctionService - Auction has been deleted");
             }
-
         }
-
-
-
     }
-
-
-
 }
