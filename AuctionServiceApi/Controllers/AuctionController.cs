@@ -435,9 +435,8 @@ public class AuctionController : ControllerBase
                 {
                     await _auctionRepository.UpdateAuctionBid(auctionId, auction, newBid);
 
+                    _logger.LogInformation("AuctionService - BidAmount updated and bid added");
                     
-
-
                     // Publish the new artifact message to RabbitMQ
                     PublishNewBidMessage(result);
 
